@@ -32,6 +32,7 @@ Requires a local Go toolchain (latest stable): `winget install GoLang.Go`.
 ```bat
 scripts\start.bat   :: builds econome.exe if needed, runs it on http://localhost:8765 (data in .\data)
 scripts\stop.bat    :: stops it
+scripts\clean.bat   :: resets to a fresh database (deletes .\data, asks for confirmation)
 ```
 
 `ECONOME_BEHIND_TLS=0` is set locally so cookies work over `http://localhost`. The offline recovery CLI

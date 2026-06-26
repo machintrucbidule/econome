@@ -1,7 +1,8 @@
 # Increment 5 — Month-initialisation assistant
 
-**Date.** 2026-06-26 · **Milestone.** M1 · **Status.** DONE (CI gates green locally; awaiting PR merge).
-**Demo.** D2 follows (running-build checkpoint, `G15`).
+**Date.** 2026-06-26 · **Milestone.** M1 · **Status.** DONE & MERGED (PR #22).
+**Demo.** D2 held (running-build checkpoint, `G15`); user testing the build. See the **D2 checkpoint** section
+at the foot of this file for the post-merge fixes, then the **exact next step** for increment 6.
 
 The first feature that **consumes the pure engine through a screen**. The user prepares a not-yet-created
 month as an editable **DRAFT** (per-account starting-balance cards, a posts table with editable leaf amounts,
@@ -113,3 +114,41 @@ follows. Depends on inc 2 (engine+reconcile), inc 3 (repos), inc 5 (a created mo
 - **Reaching the assistant.** Until the forecast (inc 6) offers "Préparer le mois" for a not-created month,
   `/month-init` is reached by URL; the e2e/demo navigate there directly. No new behaviour — the trigger
   affordance lands with the forecast.
+
+## D2 checkpoint — held; post-merge fixes (all merged to `main`)
+
+The increment-5 work was merged (PR #22) and the **D2 running-build demo** was presented. While the user
+exercised the build, several issues surfaced and were each fixed in their own merged PR (trunk discipline,
+CI green, no behaviour smuggled in — owning-layer logs updated first):
+
+- **#23 — default listen port `:8080` → `:8765`** (**I-029**). `:8080` collided with another local service.
+  Changed `config.defaultListen` + all references (`start.bat`, `.env.example`, `docker-compose.yml`,
+  `Dockerfile`, `README`, `technical/07` §3). `ECONOME_LISTEN` override unchanged.
+- **#24 — restored `/setup` + `/login` card styling.** The auth-layout classes (`.authstage`, `.auth-card`,
+  `.fld`, `.pwrules`, …) lived in the `mockups/login.html` page `<style>` and were never ported into the
+  shared `web/assets/econome.css` at increment 0, so the first-run page rendered unstyled. Ported them
+  (CSP-clean) + added a regression test asserting the served CSS defines every auth selector the templates use.
+- **#25 — password min length 12 → 8** (**M27**, supersedes A8's length) **+ home nav fix.** User's choice
+  (A8 was flagged revisable). Updated the single validator, FR/EN strings, boundary tests, `functional/01` §9,
+  `technical/05` §1. Also: `home.html` hard-coded all three nav links to `/` — wired "Configuration" to
+  `/config/parameters` (Paramètres was unreachable from the landing shell).
+- **#26 — money parser accepts `.` as decimal in fr-FR when unambiguous** (**I-030**). A French user typing
+  `12.50` parsed as `1250` (×100) because `.` was dropped as grouping. `ParseMoney`/`ParsePercent` now infer
+  the separator; ambiguous input still rejected; still exact integer minor units. `technical/06` §2 updated.
+- **`scripts/clean.bat`** added — reset to a fresh DB (deletes `./data`, with a typed `YES` confirmation),
+  alongside `start.bat`/`stop.bat`.
+
+**New open points** (carried into `CLAUDE.md`): **O-19** `e2e chrome smoke` is **flaky** (Chrome
+websocket-launch timeout; failed-then-passed on re-run for #24 and #25 — harden the launch/timeout or add a
+retry). **O-20** the increment-1 placeholder `home.html` shell still uses inline `onclick` toggles that CSP
+blocks (theme/panel buttons inert) — to be superseded when **6a** builds the real budget shell.
+
+## Exact next step (updated)
+
+**Increment 6 — Forecast + Journal + reconciliation orchestration**, delivered as **4 small sequential PRs**
+(agreed with the user at the D2 checkpoint): **6a** Forecast read-only · **6b** Forecast inline edit + recalc
+matrix + end-of-month transfer + locked-month guard · **6c** Journal (entry/edit/sort/filter/transfer/atomic
+delete) · **6d** reconciliation orchestration (pure `engine.Reconcile`) + `label_mapping` + `ui_preference`,
+**mandatory subagent review on the reconciliation path**, then close-out (`0006-budget-core.md`) + demo **D3**.
+Specs: `functional/05`, `functional/06`, `functional/04` §3.4/§3.5/§6/§7, `rules` §2–§11/§14, `technical/04`
+§3.2–§3.3, `technical/03` §3.4/§3.5/§5.1/§5.2. **Awaiting the user's go-ahead before starting 6a** (`G15`).
