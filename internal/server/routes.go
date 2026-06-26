@@ -52,6 +52,18 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	mux.Handle("POST /logout", protected(http.HandlerFunc(h.Logout)))
 	mux.Handle("GET /{$}", protected(http.HandlerFunc(h.Home)))
 
+	// Configuration — Paramètres (increment 4, PR-a).
+	mux.Handle("GET /config/parameters", protected(http.HandlerFunc(h.ParametersGet)))
+	mux.Handle("GET /config/accounts/new", protected(http.HandlerFunc(h.AccountFormGet)))
+	mux.Handle("GET /config/accounts/{id}/edit", protected(http.HandlerFunc(h.AccountFormGet)))
+	mux.Handle("POST /config/accounts", protected(http.HandlerFunc(h.AccountCreate)))
+	mux.Handle("PATCH /config/accounts/{id}", protected(http.HandlerFunc(h.AccountUpdate)))
+	mux.Handle("POST /config/accounts/{id}/archive", protected(http.HandlerFunc(h.AccountArchive)))
+	mux.Handle("POST /config/accounts/{id}/unarchive", protected(http.HandlerFunc(h.AccountUnarchive)))
+	mux.Handle("DELETE /config/accounts/{id}", protected(http.HandlerFunc(h.AccountDelete)))
+	mux.Handle("POST /config/accounts/reorder", protected(http.HandlerFunc(h.CascadeReorder)))
+	mux.Handle("PATCH /config/settings", protected(http.HandlerFunc(h.SettingsPatch)))
+
 	return &http.Server{
 		Addr:              cfg.Listen,
 		Handler:           mux,

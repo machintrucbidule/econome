@@ -1,0 +1,82 @@
+/* EconoMe — Configuration screens (Paramètres, Enveloppes) styles.
+   Lifted from the validated mockups' per-page <style> blocks (parameters.html,
+   envelopes.html). Kept here, not in econome.css, because econome.css is the
+   byte-for-byte design system re-synced from the mockups and never hand-edited. */
+
+/* --- Paramètres --- */
+.pwrap { max-width: 880px; }
+.psec { font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--faint); margin: 22px 2px 10px; }
+.pcard { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+.pcard.dim { opacity: .6; }
+.pcard h2 { font-size: 16px; font-weight: 800; margin: 0 0 4px; }
+.pcard .desc { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; }
+.pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 680px) { .pgrid { grid-template-columns: 1fr; } }
+.fr- { display: flex; flex-direction: column; gap: 6px; }
+.fr- > label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.fr- .sub { font-size: 11.5px; color: var(--faint); }
+.fr- .err { font-size: 11.5px; color: var(--bad); font-weight: 600; }
+.sel-btn { width: 100%; justify-content: space-between; }
+.torow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; }
+.torow:not(:last-child) { border-bottom: 1px dashed var(--line); }
+.torow .tt { font-weight: 600; font-size: 14px; } .torow .ts { color: var(--faint); font-size: 12px; margin-top: 2px; }
+.sw-t { position: relative; width: 38px; height: 22px; border-radius: 999px; background: var(--line); cursor: pointer; flex: none; transition: background .15s; border: 0; padding: 0; }
+.sw-t.on { background: var(--brand); } .sw-t i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; } .sw-t.on i { left: 18px; }
+.sw-t.lock { opacity: .5; cursor: not-allowed; }
+.fin-sweep { background: var(--brand-soft); color: var(--brand); }
+.fin-carry { background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
+.finchip { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.casc { list-style: none; margin: 8px 0 0; padding: 0; }
+.casc li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; background: var(--sunk); }
+.casc .grip { color: var(--faint); cursor: grab; font-size: 16px; }
+.casc .ord { font-weight: 800; color: var(--brand); width: 18px; }
+.casc .cn { font-weight: 700; flex: 1; }
+.casc .rm { background: none; border: 0; color: var(--faint); cursor: pointer; font-size: 14px; }
+.casc .rm:hover { color: var(--bad); }
+.casc .add { border: 1px dashed var(--line); color: var(--muted); background: none; justify-content: center; cursor: pointer; font-weight: 700; width: 100%; padding: 10px; border-radius: 10px; }
+.optcards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+@media (max-width: 680px) { .optcards { grid-template-columns: 1fr; } }
+.optcard { display: block; border: 1.5px solid var(--line); border-radius: 12px; padding: 13px 15px; cursor: pointer; }
+.optcard .od { display: block; }
+.optcard.on { border-color: var(--brand); background: var(--brand-soft); }
+.optcard .ot { font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.optcard .od { color: var(--muted); font-size: 12px; margin-top: 5px; line-height: 1.45; }
+.optcard .rb { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--faint); flex: none; }
+.optcard.on .rb { border-color: var(--brand); background: radial-gradient(circle, var(--brand) 0 5px, transparent 6px); }
+.ptable td, .ptable th { white-space: nowrap; }
+.ptable .err-row td { color: var(--bad); font-weight: 600; white-space: normal; }
+.iconbtn.sm2 { width: 30px; height: 30px; font-size: 13px; }
+.linkbtn { background: none; border: 0; color: var(--brand); font-weight: 700; cursor: pointer; font-size: 13.5px; padding: 0; }
+.arch td { opacity: .55; }
+
+/* shared modal (account & envelope create/edit forms) */
+.modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(8, 30, 40, .45); padding: 20px; }
+.modal-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); width: min(720px, 100%); max-height: 90vh; overflow: auto; }
+.modal-h { display: flex; align-items: center; gap: 10px; padding: 17px 22px; border-bottom: 1px solid var(--line); }
+.modal-h h3 { margin: 0; font-size: 18px; font-weight: 800; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px 22px; }
+.form-grid .full { grid-column: 1 / -1; }
+.fwrap { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fwrap > label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.fwrap .sub { font-size: 11.5px; color: var(--faint); }
+.fwrap .err { font-size: 11.5px; color: var(--bad); font-weight: 600; }
+.fwrap.off { opacity: .4; pointer-events: none; }
+.fwrap .sel-btn { width: 100%; justify-content: space-between; }
+.form-note { margin: 0 22px 4px; padding: 11px 14px; background: var(--warn-soft); color: var(--warn); border-radius: 10px; font-size: 12.5px; font-weight: 600; }
+.form-err { margin: 0 22px 4px; padding: 11px 14px; background: var(--bad-soft); color: var(--bad); border-radius: 10px; font-size: 12.5px; font-weight: 600; }
+.modal-f { display: flex; justify-content: flex-end; gap: 10px; padding: 18px 22px; }
+
+/* native-control variants (CSP-clean: no inline handlers) */
+.tabs .disabled { opacity: .45; cursor: default; }
+.sw-c { display: inline-flex; cursor: pointer; }
+.sw-c input { position: absolute; opacity: 0; width: 0; height: 0; }
+.sw-c input:checked + .sw-t { background: var(--brand); }
+.sw-c input:checked + .sw-t i { left: 18px; }
+.sw-c input:focus-visible + .sw-t { outline: 2px solid var(--brand); outline-offset: 2px; }
+.optlabel { display: block; cursor: pointer; }
+.optlabel input { position: absolute; opacity: 0; width: 0; height: 0; }
+.optlabel input:checked + .optcard { border-color: var(--brand); background: var(--brand-soft); }
+.optlabel input:checked + .optcard .rb { border-color: var(--brand); background: radial-gradient(circle, var(--brand) 0 5px, transparent 6px); }
+.optlabel input:focus-visible + .optcard { outline: 2px solid var(--brand); outline-offset: 2px; }
+.cardform-f { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.savedmsg { color: var(--ok); font-weight: 700; font-size: 12.5px; }

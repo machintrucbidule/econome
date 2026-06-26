@@ -1,0 +1,219 @@
+{{define "parameters"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "confhead" .}}<title>{{.T "param.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="app no-right" hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
+  {{template "rail" .}}
+  <main class="center">
+    <header class="head">
+      <button class="iconbtn btn-left" type="button" data-action="nav-left">☰</button>
+      <h1>{{.T "param.title"}}</h1>
+      <div class="sp"></div>
+      <div class="tabs"><span class="disabled">{{.T "nav.envelopes"}}</span><a class="on" href="/config/parameters">{{.T "param.title"}}</a></div>
+    </header>
+    <div class="cbody">
+      <div id="pbody" class="pwrap">
+        <div class="psec">{{.T "param.section.accounts"}}</div>
+        {{template "comptes-card" .}}
+        {{template "card-epargne" .}}
+        <div class="psec">{{.T "param.section.app"}}</div>
+        {{template "card-localisation" .}}
+        {{template "card-preferences" .}}
+        {{template "card-dsp2" .}}
+        <div class="psec">{{.T "param.section.security"}}</div>
+        {{template "card-auth-stub" .}}
+      </div>
+    </div>
+  </main>
+  <div id="modal-host"></div>
+</div>
+<div id="tt"></div>
+{{template "confscripts" .}}
+</body>
+</html>{{end}}
+
+
+{{/* --- Comptes card --- */}}
+{{define "comptes-card"}}<div class="pcard" id="comptes-card">{{template "comptes-card-body" .}}</div>{{end}}
+{{define "comptes-oob"}}<div class="pcard" id="comptes-card" hx-swap-oob="outerHTML">{{template "comptes-card-body" .}}</div>{{end}}
+
+{{define "comptes-card-body"}}
+<div style="display:flex;align-items:center;gap:10px">
+  <h2 style="margin:0">{{.T "param.accounts.title"}}</h2>
+  <span class="sp" style="flex:1"></span>
+  {{if gt .ArchivedCount 0}}
+  <label class="torow" style="padding:0;border:0;gap:8px;font-size:13px;color:var(--muted)">
+    <span class="sw-c"><input type="checkbox" data-action="toggle-arch"><span class="sw-t"><i></i></span></span>{{.T "param.accounts.archived"}}
+  </label>
+  {{end}}
+  <button class="btn primary" type="button" hx-get="/config/accounts/new" hx-target="#modal-host" hx-swap="innerHTML">{{.T "param.accounts.add"}}</button>
+</div>
+<p class="desc" style="margin-top:10px">{{.T "param.accounts.help"}}</p>
+<table class="ptable">
+  <thead><tr><th>{{.T "param.accounts.col.account"}}</th><th>{{.T "param.accounts.col.type"}}</th><th>{{.T "param.accounts.col.policy"}}</th><th class="n">{{.T "param.accounts.col.ceiling"}}</th><th></th></tr></thead>
+  <tbody>
+  {{range .Accounts}}
+    <tr class="{{if .Archived}}arch hidden{{end}}">
+      <td>{{.Name}}{{if .Archived}} <span class="pill mut">{{$.T "param.accounts.archived_badge"}}</span>{{end}}</td>
+      <td>{{.TypeLabel}}</td>
+      <td>{{if .ChipClass}}<span class="finchip {{.ChipClass}}">{{.PolicyText}}</span>{{else}}{{.PolicyText}}{{end}}</td>
+      <td class="n">{{.CeilingStr}}</td>
+      <td>
+        {{if .Archived}}
+          <button class="iconbtn sm2" type="button" title="{{$.T "param.accounts.restore"}}" hx-post="/config/accounts/{{.ID}}/unarchive" hx-target="#comptes-card" hx-swap="outerHTML">↺</button>
+        {{else}}
+          <button class="iconbtn sm2" type="button" title="{{$.T "action.edit"}}" hx-get="/config/accounts/{{.ID}}/edit" hx-target="#modal-host" hx-swap="innerHTML">✎</button>
+        {{end}}
+      </td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+
+
+{{/* --- Épargne & fiscalité card (PEA, cascade, secured basis) --- */}}
+{{define "card-epargne"}}
+<div class="pcard" id="card-epargne">
+  <h2>{{.T "param.savings.title"}}</h2>
+  <p class="desc">{{.T "param.savings.help"}}</p>
+  <form hx-patch="/config/settings" hx-target="#card-epargne" hx-swap="outerHTML">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <input type="hidden" name="card" value="epargne">
+    <div class="pgrid">
+      <div class="fr-"><label>{{.T "param.savings.default_account"}}</label>
+        <select class="inp" name="default_account_id">
+          <option value="0">{{.T "param.savings.no_default"}}</option>
+          {{range .CurrentOptions}}<option value="{{.Value}}" {{if eq .Value (printf "%d" $.Settings.DefaultAccountID)}}selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+      </div>
+      <div class="fr-"><label>{{.T "param.savings.pea_initial"}}</label><input class="inp n" name="pea_initial_deposit" value="{{.Settings.PEAInitialStr}}">{{if .FieldError "pea_initial_deposit"}}<span class="err">{{.FieldError "pea_initial_deposit"}}</span>{{end}}<span class="sub">{{.T "param.savings.pea_initial_sub"}}</span></div>
+      <div class="fr-"><label>{{.T "param.savings.pea_rate"}}</label><input class="inp n" name="pea_social_charge_rate" value="{{.Settings.PEARateStr}}">{{if .FieldError "pea_social_charge_rate"}}<span class="err">{{.FieldError "pea_social_charge_rate"}}</span>{{end}}<span class="sub">{{.T "param.savings.pea_rate_sub"}}</span></div>
+      <div class="fr-"><label>{{.T "param.savings.near_cap"}}</label><input class="inp n" name="near_cap_threshold" value="{{.Settings.NearCapStr}}">{{if .FieldError "near_cap_threshold"}}<span class="err">{{.FieldError "near_cap_threshold"}}</span>{{end}}<span class="sub">{{.T "param.savings.near_cap_sub"}}</span></div>
+    </div>
+    <div style="margin-top:18px">
+      <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">{{.T "param.savings.basis"}}</label>
+      <div class="optcards">
+        <label class="optlabel"><input type="radio" name="secured_savings_basis" value="all_planned" {{if eq .Settings.Basis "all_planned"}}checked{{end}}><span class="optcard" data-basis="all_planned"><span class="ot"><span class="rb"></span>{{.T "param.savings.basis.all"}}</span><span class="od">{{.T "param.savings.basis.all_desc"}}</span></span></label>
+        <label class="optlabel"><input type="radio" name="secured_savings_basis" value="fixed_only" {{if eq .Settings.Basis "fixed_only"}}checked{{end}}><span class="optcard" data-basis="fixed_only"><span class="ot"><span class="rb"></span>{{.T "param.savings.basis.fixed"}}</span><span class="od">{{.T "param.savings.basis.fixed_desc"}}</span></span></label>
+      </div>
+    </div>
+    <div class="cardform-f"><button class="btn primary" type="submit">{{.T "action.save"}}</button></div>
+  </form>
+  <div style="margin-top:18px">
+    <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">{{.T "param.savings.cascade"}}</label>
+    <p class="desc" style="margin:6px 0 0">{{.T "param.savings.cascade_help"}}</p>
+    {{template "cascade-card" .}}
+  </div>
+</div>
+{{end}}
+
+{{define "cascade-card"}}
+<ul class="casc" id="cascade" data-csrf="{{.CSRF}}">
+  {{range .Cascade}}
+  <li class="casc-item" data-id="{{.ID}}"><span class="grip" title="{{$.T "param.savings.cascade_drag"}}">⠿</span><span class="ord">{{.Order}}</span><span class="cn">{{.Name}}</span><button class="rm" type="button" data-action="cascade-remove" data-id="{{.ID}}" title="{{$.T "param.savings.cascade_remove"}}">✕</button></li>
+  {{end}}
+  {{if .CascadeAddable}}
+  <li><select class="inp" data-action="cascade-add"><option value="">{{$.T "param.savings.cascade_add"}}</option>{{range .CascadeAddable}}<option value="{{.Value}}">{{.Label}}</option>{{end}}</select></li>
+  {{end}}
+</ul>
+{{end}}
+
+
+{{/* --- Localisation card --- */}}
+{{define "card-localisation"}}
+<div class="pcard" id="card-localisation">
+  <h2>{{.T "param.locale.title"}}</h2>
+  <form hx-patch="/config/settings" hx-target="#card-localisation" hx-swap="outerHTML">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <input type="hidden" name="card" value="localisation">
+    <div class="pgrid">
+      <div class="fr-"><label>{{.T "param.locale.language"}}</label>
+        <select class="inp" name="language">{{range .LangOptions}}<option value="{{.Value}}" {{if eq .Value $.Settings.Language}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+      </div>
+      <div class="fr-"><label>{{.T "param.locale.currency"}}</label>
+        <select class="inp" name="currency">{{range .CurrencyOptions}}<option value="{{.Value}}" {{if eq .Value $.Settings.Currency}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+        <span class="sub">{{.T "param.locale.currency_sub"}}</span>
+      </div>
+    </div>
+    <div class="cardform-f"><button class="btn primary" type="submit">{{.T "action.save"}}</button></div>
+  </form>
+</div>
+{{end}}
+
+
+{{/* --- Préférences card --- */}}
+{{define "card-preferences"}}
+<div class="pcard" id="card-preferences">
+  <h2>{{.T "param.prefs.title"}}</h2>
+  <form hx-patch="/config/settings" hx-target="#card-preferences" hx-swap="outerHTML">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <input type="hidden" name="card" value="preferences">
+    <div class="torow">
+      <div><div class="tt">{{.T "param.prefs.comment"}}</div><div class="ts">{{.T "param.prefs.comment_sub"}}</div></div>
+      <label class="sw-c"><input type="checkbox" name="comment_autoprefill" value="1" {{if .Settings.Comment}}checked{{end}}><span class="sw-t"><i></i></span></label>
+    </div>
+    <div class="torow">
+      <div><div class="tt">{{.T "param.prefs.theme"}}</div><div class="ts">{{.T "param.prefs.theme_sub"}}</div></div>
+      <label class="sw-c"><input type="checkbox" name="theme" value="dark" data-action="theme-pref" {{if .Settings.ThemeDark}}checked{{end}}><span class="sw-t"><i></i></span></label>
+    </div>
+    <div class="cardform-f"><button class="btn primary" type="submit">{{.T "action.save"}}</button></div>
+  </form>
+</div>
+{{end}}
+
+
+{{/* --- DSP2 (disabled, anchors the forward-compatible model) --- */}}
+{{define "card-dsp2"}}
+<div class="pcard dim">
+  <div class="torow" style="border:0;padding:0">
+    <div><h2 style="margin:0">{{.T "param.dsp2.title"}} <span class="pill mut">{{.T "param.dsp2.soon"}}</span></h2><div class="ts" style="margin-top:6px">{{.T "param.dsp2.sub"}}</div></div>
+    <span class="sw-t lock" title="{{.T "param.dsp2.disabled"}}"><i></i></span>
+  </div>
+</div>
+{{end}}
+
+
+{{/* --- Auth panels: entry points only; built in increment 8 --- */}}
+{{define "card-auth-stub"}}
+<div class="pcard dim">
+  <div class="torow" style="border:0;padding:0">
+    <div><h2 style="margin:0">{{.T "param.security.title"}} <span class="pill mut">{{.T "param.dsp2.soon"}}</span></h2><div class="ts" style="margin-top:6px">{{.T "param.security.sub"}}</div></div>
+  </div>
+</div>
+{{end}}
+
+
+{{/* --- Account create / edit modal --- */}}
+{{define "account-form"}}
+<div class="modal" id="account-modal">
+  <div class="modal-card">
+    <div class="modal-h"><h3>{{if .IsEdit}}{{.T "param.accounts.edit"}}{{else}}{{.T "param.accounts.new"}}{{end}}</h3><span class="sp" style="flex:1"></span><button class="iconbtn" type="button" data-action="modal-close" title="{{.T "action.close"}}">✕</button></div>
+    <form {{if .IsEdit}}hx-patch="/config/accounts/{{.ID}}"{{else}}hx-post="/config/accounts"{{end}} hx-target="#modal-host" hx-swap="innerHTML">
+      <input type="hidden" name="_csrf" value="{{.CSRF}}">
+      {{if .FormError}}<div class="form-err">{{.FormError}}</div>{{end}}
+      <div class="form-grid">
+        <div class="fwrap full"><label>{{.T "param.accounts.f.name"}}</label><input class="inp" name="name" value="{{.Name}}" placeholder="{{.T "param.accounts.f.name_ph"}}" autofocus>{{if .FieldError "name"}}<span class="err">{{.FieldError "name"}}</span>{{end}}</div>
+        <div class="fwrap"><label>{{.T "param.accounts.f.type"}}</label>
+          <select class="inp" id="a-type" name="type">{{range .TypeOptions}}<option value="{{.Value}}" {{if eq .Value $.Type}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+          {{if .FieldError "type"}}<span class="err">{{.FieldError "type"}}</span>{{end}}
+        </div>
+        <div class="fwrap {{if not .IsCurrent}}off{{end}}" id="w-policy"><label>{{.T "param.accounts.f.policy"}}</label>
+          <select class="inp" id="a-policy" name="month_end_policy">
+            <option value="sweep" {{if eq .Policy "sweep"}}selected{{end}}>{{.T "account.policy.sweep"}}</option>
+            <option value="carry" {{if eq .Policy "carry"}}selected{{end}}>{{.T "account.policy.carry"}}</option>
+            <option value="none" {{if eq .Policy "none"}}selected{{end}}>{{.T "account.policy.none"}}</option>
+          </select>
+          {{if .FieldError "month_end_policy"}}<span class="err">{{.FieldError "month_end_policy"}}</span>{{end}}
+        </div>
+        <div class="fwrap {{if .IsCurrent}}off{{end}}" id="w-ceiling"><label>{{.T "param.accounts.f.ceiling"}}</label><input class="inp n" name="ceiling" value="{{.CeilingStr}}" placeholder="{{.T "param.accounts.f.ceiling_ph"}}">{{if .FieldError "ceiling"}}<span class="err">{{.FieldError "ceiling"}}</span>{{end}}<span class="sub">{{.T "param.accounts.f.ceiling_sub"}}</span></div>
+      </div>
+      <div class="modal-f">
+        {{if .IsEdit}}<button class="btn" type="button" hx-delete="/config/accounts/{{.ID}}" hx-target="#comptes-card" hx-swap="outerHTML" hx-confirm="{{.T "param.accounts.delete_confirm"}}" data-action="modal-close" style="margin-right:auto;color:var(--bad)">{{.T "action.delete"}}</button>{{end}}
+        <button class="btn" type="button" data-action="modal-close">{{.T "action.cancel"}}</button>
+        <button class="btn primary" type="submit">{{.T "action.save"}}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}
