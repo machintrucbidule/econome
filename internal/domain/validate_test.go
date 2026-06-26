@@ -8,7 +8,8 @@ func TestCheckPassword(t *testing.T) {
 		all bool
 	}{
 		{"Abcdef1!ghij", true},     // 12 chars, all classes
-		{"Abcdef1!", false},        // too short (8)
+		{"Abcdef1!", true},         // 8 chars, all classes (min length 8, M27)
+		{"Aa1!bcd", false},         // 7 chars — too short
 		{"abcdefghij1!", false},    // no upper
 		{"ABCDEFGHIJ1!", false},    // no lower
 		{"Abcdefghij!!", false},    // no digit

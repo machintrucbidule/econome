@@ -37,7 +37,7 @@
 "login.locked" = "Trop de tentatives. Réessayez dans {0} s."
 "login.totp_not_enabled" = "La double authentification n'est pas activée."
 
-"password.rule.min" = "Au moins 12 caractères"
+"password.rule.min" = "Au moins 8 caractères"
 "password.rule.lower" = "Une minuscule"
 "password.rule.upper" = "Une majuscule"
 "password.rule.digit" = "Un chiffre"
@@ -45,7 +45,7 @@
 
 "validation.email.required" = "L'adresse e-mail est requise."
 "validation.email.invalid" = "Adresse e-mail invalide."
-"validation.password.too_short" = "Le mot de passe doit comporter au moins 12 caractères."
+"validation.password.too_short" = "Le mot de passe doit comporter au moins 8 caractères."
 "validation.password.classes" = "Le mot de passe doit contenir minuscule, majuscule, chiffre et symbole."
 "validation.password.mismatch" = "Les mots de passe ne correspondent pas."
 
