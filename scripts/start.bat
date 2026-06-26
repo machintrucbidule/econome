@@ -18,6 +18,6 @@ if not exist "%ROOT%\econome.exe" (
   popd
 )
 
-echo Starting EconoMe on http://localhost:8080  (Ctrl+C to stop)
-start "" http://localhost:8080
+echo Starting EconoMe on http://localhost:8765  (Ctrl+C to stop)
+start "" http://localhost:8765
 "%ROOT%\econome.exe"

@@ -43,7 +43,7 @@ type Config struct {
 // local start.bat sets ECONOME_BEHIND_TLS=0.
 const (
 	defaultDataDir       = "/data"
-	defaultListen        = ":8080"
+	defaultListen        = ":8765"
 	defaultBehindTLS     = true
 	defaultDefaultLocale = "fr"
 	defaultLogLevel      = "info"

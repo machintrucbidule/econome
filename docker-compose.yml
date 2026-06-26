@@ -4,7 +4,7 @@
 # Load-bearing: the SQLite database + secret live on a MOUNTED NAMED VOLUME, never
 # in the container's writable layer — this is what keeps data safe across
 # Watchtower image recreation. TLS is terminated by an upstream reverse proxy on
-# the external `proxy` network; the app listens HTTP on :8080.
+# the external `proxy` network; the app listens HTTP on :8765.
 services:
   econome:
     image: ghcr.io/machintrucbidule/econome:stable
@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       ECONOME_DATA_DIR: /data
-      ECONOME_LISTEN: ":8080"
+      ECONOME_LISTEN: ":8765"
       ECONOME_BEHIND_TLS: "1"
       ECONOME_DEFAULT_LOCALE: fr
       ECONOME_LOG_LEVEL: info
@@ -20,7 +20,7 @@ services:
     volumes:
       - econome-data:/data
     expose:
-      - "8080"
+      - "8765"
     networks:
       - proxy
     # Liveness is GET /healthz (lands in increment 1); the reverse proxy /
