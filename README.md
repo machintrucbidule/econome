@@ -30,7 +30,7 @@ per-increment build notes are under `docs/progress/`.
 Requires a local Go toolchain (latest stable): `winget install GoLang.Go`.
 
 ```bat
-scripts\start.bat   :: builds econome.exe if needed, runs it on http://localhost:8080 (data in .\data)
+scripts\start.bat   :: builds econome.exe if needed, runs it on http://localhost:8765 (data in .\data)
 scripts\stop.bat    :: stops it
 ```
 
@@ -48,7 +48,7 @@ every PR and on `main`; see `specifications/guardrails/`.
 Multi-arch image published to **GHCR** on a release tag (`vX.Y.Z` + a moving `stable` channel that
 **Watchtower** follows). Deployed via Portainer/Watchtower with the SQLite database + secret on a
 **mounted named volume** (the rule that keeps data safe across image updates). TLS is terminated by an
-upstream reverse proxy; the app listens HTTP on `:8080`. Configuration is via `ECONOME_*` environment
+upstream reverse proxy; the app listens HTTP on `:8765`. Configuration is via `ECONOME_*` environment
 variables (`.env.example`). On startup the app takes a pre-migration backup, applies migrations
 transactionally, and aborts on failure with the backup intact. See
 `specifications/technical/07-deployment.md`.

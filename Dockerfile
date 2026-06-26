@@ -26,7 +26,7 @@ COPY --from=build /out/econome /econome
 COPY --from=build /out/econome-admin /econome-admin
 
 ENV ECONOME_DATA_DIR=/data
-EXPOSE 8080
+EXPOSE 8765
 VOLUME ["/data"]
 USER nonroot:nonroot
 ENTRYPOINT ["/econome"]
