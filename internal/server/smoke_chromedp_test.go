@@ -134,8 +134,9 @@ func TestSmokeForecastInlineEdit(t *testing.T) {
 		chromedp.WaitVisible(`.app`, chromedp.ByQuery),
 		chromedp.Navigate(ts.URL+"/?period=2026-06&scope="+fID),
 		chromedp.WaitVisible(`#fc-panel`, chromedp.ByID),
-		// Drop the income (first inline input) to 0 → htmx PATCH recompute.
-		chromedp.Evaluate(`(function(){var i=document.querySelector('.amt-inp');i.value='0,00';i.dispatchEvent(new Event('change',{bubbles:true}));})()`, nil),
+		// Raise the Courses expense (first inline input — rows sort by name, so
+		// "Courses" precedes "Salaire") past income → htmx PATCH recompute negative.
+		chromedp.Evaluate(`(function(){var i=document.querySelector('.amt-inp');i.value='9000,00';i.dispatchEvent(new Event('change',{bubbles:true}));})()`, nil),
 		chromedp.Sleep(400*time.Millisecond),
 		chromedp.Text(`#fc-panel`, &panelText, chromedp.ByID),
 	)
