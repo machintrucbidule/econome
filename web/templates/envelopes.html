@@ -1,0 +1,134 @@
+{{define "envelopes"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "confhead" .}}<title>{{.T "env.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="app no-right" hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
+  {{template "rail" .}}
+  <main class="center">
+    <header class="head">
+      <button class="iconbtn btn-left" type="button" data-action="nav-left">☰</button>
+      <h1>{{.T "env.title"}}</h1>
+      <div class="sp"></div>
+      <div class="tabs"><a class="on" href="/config/envelopes">{{.T "nav.envelopes"}}</a><a href="/config/parameters">{{.T "param.title"}}</a></div>
+    </header>
+    <div class="cbody">
+      <div class="toolrow">
+        <div style="color:var(--muted);font-size:13px">{{.T "env.intro"}}</div>
+        <div class="sp"></div>
+        {{if .HasArchived}}<label class="archtog"><span class="sw-c"><input type="checkbox" data-action="toggle-arch"><span class="sw-t"><i></i></span></span>{{.T "env.show_archived"}}</label>{{end}}
+        <button class="btn primary" type="button" hx-get="/config/envelopes/new" hx-target="#modal-host" hx-swap="innerHTML">{{.T "env.add"}}</button>
+      </div>
+      {{template "envelopes-list" .}}
+    </div>
+  </main>
+  <div id="modal-host"></div>
+</div>
+<div id="tt"></div>
+{{template "confscripts" .}}
+</body>
+</html>{{end}}
+
+
+{{define "envelopes-list"}}<div id="env-list">{{template "envelopes-list-body" .}}</div>{{end}}
+{{define "envelopes-oob"}}<div id="env-list" hx-swap-oob="outerHTML">{{template "envelopes-list-body" .}}</div>{{end}}
+
+{{define "envelopes-list-body"}}
+{{if .IsEmpty}}
+  <section class="empty">
+    <h3>{{.T "env.empty.title"}}</h3>
+    <p>{{.T "env.empty.body"}}</p>
+    <button class="btn primary" type="button" hx-get="/config/envelopes/new" hx-target="#modal-host" hx-swap="innerHTML">{{.T "env.add"}}</button>
+  </section>
+{{else}}
+  <table class="etable">
+    <colgroup><col><col style="width:130px"><col style="width:130px"><col style="width:140px"><col style="width:120px" class="n"><col style="width:70px" class="n"><col style="width:54px"></colgroup>
+    <thead><tr>
+      <th class="enm">{{.T "env.col.name"}}</th><th>{{.T "env.col.account"}}</th><th>{{.T "env.col.mode"}}</th><th>{{.T "env.col.frequency"}}</th><th class="n">{{.T "env.col.default"}}</th><th class="n">{{.T "env.col.day"}}</th><th></th>
+    </tr></thead>
+    <tbody>
+    {{range .Parents}}
+      <tr class="tog" data-k="{{.Key}}">
+        <td class="enm"><div class="nm"><button class="chev{{if .Expanded}} open{{end}}" type="button" data-action="toggle-group" data-k="{{.Key}}">›</button>{{.Name}} <span class="agg">{{.ChildCount}} {{$.T "env.subposts"}}</span></div></td>
+        <td>—</td><td>—</td><td>—</td><td class="n">{{.SumStr}}</td><td class="n">—</td><td></td>
+      </tr>
+      {{$key := .Key}}{{$exp := .Expanded}}
+      {{range .Children}}
+        <tr class="child{{if not $exp}} hidden{{end}}{{if .Archived}} arch{{end}}" data-c="{{$key}}">
+          <td class="enm"><div class="nm">{{.Name}}{{if .Archived}} <span class="pill mut">{{$.T "env.archived_badge"}}</span>{{end}}</div></td>
+          <td><span class="pill-acc">{{.AccountName}}</span></td>
+          <td><span class="{{.BadgeClass}}">{{.BadgeLabel}}</span></td>
+          <td>{{.FreqLabel}}</td>
+          <td class="n{{if eq .DefaultStr "auto"}} auto{{end}}">{{.DefaultStr}}</td>
+          <td class="n">{{.DayStr}}</td>
+          <td><button class="editbtn" type="button" title="{{$.T "action.edit"}}" hx-get="/config/envelopes/{{.ID}}/edit" hx-target="#modal-host" hx-swap="innerHTML">✎</button></td>
+        </tr>
+      {{end}}
+    {{end}}
+    {{range .TopLevel}}
+      <tr class="{{if .Archived}}arch hidden{{end}}">
+        <td class="enm"><div class="nm">{{.Name}}{{if .Archived}} <span class="pill mut">{{$.T "env.archived_badge"}}</span>{{end}}</div></td>
+        <td><span class="pill-acc">{{.AccountName}}</span></td>
+        <td><span class="{{.BadgeClass}}">{{.BadgeLabel}}</span></td>
+        <td>{{.FreqLabel}}</td>
+        <td class="n{{if eq .DefaultStr "auto"}} auto{{end}}">{{.DefaultStr}}</td>
+        <td class="n">{{.DayStr}}</td>
+        <td><button class="editbtn" type="button" title="{{$.T "action.edit"}}" hx-get="/config/envelopes/{{.ID}}/edit" hx-target="#modal-host" hx-swap="innerHTML">✎</button></td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+{{end}}
+{{end}}
+
+
+{{define "envelope-form"}}
+<div class="modal" id="envelope-modal">
+  <div class="modal-card">
+    <div class="modal-h"><h3>{{if .IsEdit}}{{.T "env.edit"}}{{else}}{{.T "env.new"}}{{end}}</h3><span class="sp" style="flex:1"></span><button class="iconbtn" type="button" data-action="modal-close" title="{{.T "action.close"}}">✕</button></div>
+    <form {{if .IsEdit}}hx-patch="/config/envelopes/{{.ID}}"{{else}}hx-post="/config/envelopes"{{end}} hx-target="#modal-host" hx-swap="innerHTML">
+      <input type="hidden" name="_csrf" value="{{.CSRF}}">
+      {{if .FormError}}<div class="form-err">{{.FormError}}</div>{{end}}
+      <div class="form-grid">
+        <div class="fwrap full"><label>{{.T "env.f.name"}}</label><input class="inp" name="name" value="{{.Name}}" placeholder="{{.T "env.f.name_ph"}}" autofocus>{{if .FieldError "name"}}<span class="err">{{.FieldError "name"}}</span>{{end}}</div>
+        <div class="fwrap"><label>{{.T "env.f.parent"}}</label>
+          <select class="inp" id="e-parent" name="parent_id">
+            <option value="0" {{if eq .ParentID 0}}selected{{end}}>{{.T "env.f.parent_none"}}</option>
+            {{range .ParentOptions}}<option value="{{.Value}}" {{if eq .Value (printf "%d" $.ParentID)}}selected{{end}}>{{.Label}}</option>{{end}}
+            <option value="__new__">{{.T "env.f.parent_new"}}</option>
+          </select>
+        </div>
+        <div class="fwrap hidden" id="w-newparent"><label>{{.T "env.f.new_parent"}}</label><input class="inp" name="new_parent_name" placeholder="{{.T "env.f.new_parent_ph"}}"></div>
+        <div class="fwrap"><label>{{.T "env.f.account"}}</label>
+          <select class="inp" id="e-account" name="account_id">{{range .AccountOptions}}<option value="{{.Value}}" {{if eq .Value (printf "%d" $.AccountID)}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+          {{if .FieldError "account_id"}}<span class="err">{{.FieldError "account_id"}}</span>{{end}}
+        </div>
+        <div class="fwrap"><label>{{.T "env.f.flow"}}</label>
+          <select class="inp" id="e-flow" name="flow_type">{{range .FlowOptions}}<option value="{{.Value}}" {{if eq .Value $.FlowType}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+          {{if .FieldError "flow_type"}}<span class="err">{{.FieldError "flow_type"}}</span>{{end}}
+        </div>
+        <div class="fwrap"><label>{{.T "env.f.mode"}}</label>
+          <select class="inp" id="e-mode" name="mode">{{range .ModeOptions}}<option value="{{.Value}}" {{if eq .Value $.Mode}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+          {{if .FieldError "mode"}}<span class="err">{{.FieldError "mode"}}</span>{{end}}
+        </div>
+        <div class="fwrap{{if .IsResidual}} off{{end}}" id="w-amount"><label>{{.T "env.f.amount"}}</label><input class="inp n" name="default_amount" value="{{.DefaultStr}}" placeholder="{{.T "env.f.amount_ph"}}">{{if .FieldError "default_amount"}}<span class="err">{{.FieldError "default_amount"}}</span>{{end}}<span class="sub">{{.T "env.f.amount_sub"}}</span></div>
+        <div class="fwrap{{if not .IsFixed}} off{{end}}" id="w-freq"><label>{{.T "env.f.frequency"}}</label>
+          <select class="inp" id="e-freq" name="frequency">{{range .FreqOptions}}<option value="{{.Value}}" {{if eq .Value $.Frequency}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+          {{if .FieldError "frequency"}}<span class="err">{{.FieldError "frequency"}}</span>{{end}}
+        </div>
+        <div class="fwrap{{if not .NonMonthly}} off{{end}}" id="w-month"><label>{{.T "env.f.month"}}</label>
+          <select class="inp" id="e-month" name="due_month"><option value="">—</option>{{range .MonthOptions}}<option value="{{.Value}}" {{if eq .Value $.DueMonth}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+          {{if .FieldError "due_months"}}<span class="err">{{.FieldError "due_months"}}</span>{{end}}
+        </div>
+        <div class="fwrap{{if not .IsFixed}} off{{end}}" id="w-day"><label>{{.T "env.f.day"}}</label><input class="inp n" name="expected_day" value="{{.ExpectedDayStr}}" placeholder="{{.T "env.f.day_ph"}}">{{if .FieldError "expected_day"}}<span class="err">{{.FieldError "expected_day"}}</span>{{end}}</div>
+        <div class="fwrap full"><div class="torow"><span><b>{{.T "env.f.open"}}</b> <span class="sub">{{.T "env.f.open_sub"}}</span></span><label class="sw-c"><input type="checkbox" name="default_expanded" value="1" {{if .DefaultExpanded}}checked{{end}}><span class="sw-t"><i></i></span></label></div></div>
+      </div>
+      <div class="form-note">{{.T "env.l2_note"}}</div>
+      <div class="modal-f">
+        {{if .IsEdit}}<button class="btn" type="button" hx-delete="/config/envelopes/{{.ID}}" hx-target="#env-list" hx-swap="outerHTML" hx-confirm="{{.T "env.delete_confirm"}}" data-action="modal-close" style="margin-right:auto;color:var(--bad)">{{.T "action.delete"}}</button>{{end}}
+        <button class="btn" type="button" data-action="modal-close">{{.T "action.cancel"}}</button>
+        <button class="btn primary" type="submit">{{.T "action.save"}}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

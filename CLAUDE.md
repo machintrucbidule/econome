@@ -105,15 +105,18 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 4 (configuration screens) — IN PROGRESS: PR-a (Paramètres) done, PR-b (Enveloppes) next.**
-PR-a delivered the **Paramètres** screen (`/config/parameters`): account CRUD (sweep/carry, L3 forward-only
-via the `ensureEditable` locked-month guard, L4/L10 archive-vs-delete), settings (Épargne/Localisation/
-Préférences), the SortableJS savings cascade, all with service validation (typed 422, no partial write), the
-no-float money/rate parsing boundary (`i18n.ParseMoney/ParsePercent`), and the central error→fragment mapper
-(`G3`). The `Service` now takes a `Deps` struct. Configuration forms are **CSP-clean** (native controls +
-htmx + `web/assets/app.js` delegation; the mockup's inline-handler custom selects are deferred, I-024).
-Decisions **I-021..I-024**. See `docs/progress/0004-configuration.md`. **Next: PR-b — Enveloppes**
-(combined category+envelope form I-021, `functional/08`) — awaiting the user's go-ahead.
+**Increment 4 (configuration screens) — DONE** (PR-a #19 + PR-b #20 merged; CI green). Both **Paramètres**
+(`/config/parameters`) and **Enveloppes** (`/config/envelopes`) are live: account CRUD (sweep/carry, L3
+forward-only via the `ensureEditable` locked-month guard, L4/L10 archive-vs-delete), settings (Épargne/
+Localisation/Préférences), the SortableJS savings cascade, and the combined category+envelope CRUD (I-021:
+one form writes a leaf category — find-or-create, shared across accounts — + its envelope in one tx, inline
+new-parent, hierarchy with read-only parent sums, mode/flow badges, residual non-deletable). All with
+service validation (typed 422, no partial write), the no-float money/rate boundary
+(`i18n.ParseMoney/ParsePercent`), and the central error→fragment mapper (`G3`). The `Service` takes a `Deps`
+struct. In-app screens are **CSP-clean** (native controls + htmx + `web/assets/app.js` delegation off
+`data-action`; never add inline `onclick`/`<script>`, I-024). Decisions **I-021..I-024**. See
+`docs/progress/0004-configuration.md`. **Next: increment 5 = month-initialisation assistant**
+(`functional/09`, `development-plan/01-phased-plan.md`) — awaiting the user's go-ahead; demo **D2** follows.
 (Increments 0–3 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
 lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; the sealed pure engine + reconciliation
 at 91.7 %; and the full budget schema + `user_id`-scoped repos + fakes for all 13 tables.)
