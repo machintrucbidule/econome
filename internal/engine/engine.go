@@ -28,6 +28,43 @@ type Inputs struct {
 	Txns        []domain.Transaction
 	Snapshots   []domain.Snapshot
 	Params      Params
+
+	// StartBalances is each account's start-of-month balance for Period (I-018).
+	// The service computes it from prior periods under each account's
+	// month_end_policy (sweep ≈ 0 / carry = prior close, C5) and supplies it; the
+	// engine stays pure and period-local. Absent entries are treated as 0.
+	StartBalances map[int64]int64
+}
+
+func (in Inputs) startOfMonth(accID int64) int64 {
+	if in.StartBalances == nil {
+		return 0
+	}
+	return in.StartBalances[accID]
+}
+
+// consumptionAmount converts a signed transaction amount (income +, expense −)
+// into the envelope's positive consumption direction: an expense's spend is a
+// positive magnitude vs its planned amount; income keeps its sign (I-017).
+func consumptionAmount(flow domain.FlowType, signedAmount int64) int64 {
+	if flow == domain.FlowExpense {
+		return -signedAmount
+	}
+	return signedAmount
+}
+
+// txnAmountFor returns the signed amount a transaction applies to account accID
+// and whether it touches that account. A transfer applies +amount to its source
+// (account_id) and −amount to its destination (I-017).
+func txnAmountFor(t domain.Transaction, accID int64) (int64, bool) {
+	switch {
+	case t.AccountID == accID:
+		return t.Amount, true
+	case t.FlowType == domain.FlowTransfer && t.DestAccountID != nil && *t.DestAccountID == accID:
+		return -t.Amount, true
+	default:
+		return 0, false
+	}
 }
 
 // AccountByID returns the account with id, or false.
