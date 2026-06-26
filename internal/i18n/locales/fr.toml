@@ -1,0 +1,53 @@
+# French catalog (default locale). Keys are stable message IDs; only labels are
+# localised (internal codes stay English). Regulated proper nouns verbatim.
+
+"app.name" = "EconoMe"
+"app.tagline" = "Vos comptes, sans tableur."
+
+"nav.budget" = "Budget"
+"nav.patrimoine" = "Patrimoine"
+"nav.configuration" = "Configuration"
+
+"shell.scope" = "Vue"
+"shell.scope.all" = "Tous les comptes"
+"shell.logout" = "Se déconnecter"
+"shell.theme" = "Thème clair/sombre"
+"shell.placeholder.title" = "Bienvenue"
+"shell.placeholder.body" = "L'application est en cours de construction. Les écrans budgétaires arrivent dans les prochains incréments."
+"shell.demo.balance" = "Solde de démonstration"
+
+"setup.title" = "Configuration initiale"
+"setup.heading" = "Créer le compte propriétaire"
+"setup.intro" = "Première utilisation : créez le compte administrateur de cette instance."
+"setup.email" = "Adresse e-mail"
+"setup.password" = "Mot de passe"
+"setup.password_confirm" = "Confirmer le mot de passe"
+"setup.language" = "Langue"
+"setup.currency" = "Devise"
+"setup.submit" = "Créer le compte"
+"setup.error" = "La création a échoué. Réessayez."
+
+"login.title" = "Connexion"
+"login.heading" = "Connexion"
+"login.email" = "Adresse e-mail"
+"login.password" = "Mot de passe"
+"login.remember" = "Se souvenir de moi"
+"login.submit" = "Se connecter"
+"login.error_generic" = "E-mail ou mot de passe incorrect."
+"login.locked" = "Trop de tentatives. Réessayez dans {0} s."
+"login.totp_not_enabled" = "La double authentification n'est pas activée."
+
+"password.rule.min" = "Au moins 12 caractères"
+"password.rule.lower" = "Une minuscule"
+"password.rule.upper" = "Une majuscule"
+"password.rule.digit" = "Un chiffre"
+"password.rule.symbol" = "Un symbole"
+
+"validation.email.required" = "L'adresse e-mail est requise."
+"validation.email.invalid" = "Adresse e-mail invalide."
+"validation.password.too_short" = "Le mot de passe doit comporter au moins 12 caractères."
+"validation.password.classes" = "Le mot de passe doit contenir minuscule, majuscule, chiffre et symbole."
+"validation.password.mismatch" = "Les mots de passe ne correspondent pas."
+
+"lang.fr" = "Français"
+"lang.en" = "Anglais"
