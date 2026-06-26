@@ -27,6 +27,11 @@ func TestParseMoney(t *testing.T) {
 		{"0,05", domain.LangFR, 5},
 		{"12,5", domain.LangFR, 1250},
 		{"1234", domain.LangFR, 123400},
+		// foreign decimal separator accepted when unambiguous (I-030)
+		{"12.50", domain.LangFR, 1250},
+		{"0.05", domain.LangFR, 5},
+		{"1234.5", domain.LangFR, 123450},
+		{"12,50", domain.LangEN, 1250},
 		{minus + "635,00", domain.LangFR, -63500},
 		{"-635,00", domain.LangFR, -63500},
 		// round-trips of the formatter's own output
@@ -58,6 +63,8 @@ func TestParseMoneyErrors(t *testing.T) {
 		{"-", domain.LangFR, ErrEmptyAmount},
 		{"12,345", domain.LangFR, ErrBadAmount}, // 3 fractional digits
 		{"1,2,3", domain.LangFR, ErrBadAmount},  // two decimals
+		{"12.345", domain.LangFR, ErrBadAmount}, // 3 fractional via foreign dot
+		{"1.2.3", domain.LangFR, ErrBadAmount},  // two foreign-dot decimals
 		{"12x", domain.LangFR, ErrBadAmount},    // stray letter
 		{"abc", domain.LangFR, ErrBadAmount},    // letters
 	}
@@ -81,6 +88,7 @@ func TestParsePercent(t *testing.T) {
 		{"17,25 %", domain.LangFR, 1725},
 		{"90 %", domain.LangFR, 9000},
 		{"17.2", domain.LangEN, 1720},
+		{"17.2", domain.LangFR, 1720}, // foreign dot accepted (I-030)
 		{"99,99", domain.LangFR, 9999},
 	}
 	for _, c := range cases {

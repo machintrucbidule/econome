@@ -3,6 +3,7 @@ package i18n
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"unicode"
 
 	"econome/internal/domain"
@@ -36,6 +37,25 @@ func decimalRune(lang domain.Language) rune {
 		return '.'
 	}
 	return ','
+}
+
+// chooseDecimal picks the decimal separator actually present in s. EconoMe is
+// forgiving at the input boundary (technical/06 §2, I-030): when only the
+// "foreign" separator appears (a '.' in fr-FR, a ',' in en-) it is taken as the
+// decimal point, so a French user typing "12.50" still means 12,50 — not 1250.
+// When both separators appear, the locale's own separator is the decimal and the
+// other is grouping. Truly ambiguous input (two of the chosen separator, e.g.
+// "1,2,3") is still rejected downstream by parseFixed2.
+func chooseDecimal(s string, lang domain.Language) rune {
+	hasComma := strings.ContainsRune(s, ',')
+	hasDot := strings.ContainsRune(s, '.')
+	if hasComma != hasDot {
+		if hasComma {
+			return ','
+		}
+		return '.'
+	}
+	return decimalRune(lang)
 }
 
 // parseFixed2 parses s as a fixed-point number with at most two fractional
@@ -101,7 +121,7 @@ func parseFixed2(s string, decimal rune) (int64, error) {
 // ParseMoney parses a locale-entered amount into signed integer minor units
 // (cents). It is exact: no float is ever involved.
 func ParseMoney(s string, lang domain.Language) (int64, error) {
-	return parseFixed2(s, decimalRune(lang))
+	return parseFixed2(s, chooseDecimal(s, lang))
 }
 
 // ParsePercent parses a locale-entered percentage into basis points (17,2 % ->
@@ -111,7 +131,7 @@ func ParseMoney(s string, lang domain.Language) (int64, error) {
 func ParsePercent(s string, lang domain.Language) (int, error) {
 	// A percentage carries two decimal places of precision exactly: 1 basis
 	// point = 0.01 %, so the hundredths returned by parseFixed2 are basis points.
-	bp, err := parseFixed2(s, decimalRune(lang))
+	bp, err := parseFixed2(s, chooseDecimal(s, lang))
 	if err != nil {
 		return 0, err
 	}
