@@ -16,30 +16,55 @@ import (
 )
 
 type data struct {
-	mu          sync.Mutex
-	users       map[int64]domain.User
-	sessions    map[int64]domain.Session
-	settings    map[int64]domain.Settings
-	nextUser    int64
-	nextSession int64
+	mu           sync.Mutex
+	users        map[int64]domain.User
+	sessions     map[int64]domain.Session
+	settings     map[int64]domain.Settings
+	accounts     map[int64]domain.Account
+	categories   map[int64]domain.Category
+	envelopes    map[int64]domain.Envelope
+	allocations  map[int64]domain.Allocation
+	transactions map[int64]domain.Transaction
+	nextUser     int64
+	nextSession  int64
+	nextID       int64 // shared counter for budget entities
+}
+
+func (d *data) id() int64 {
+	d.nextID++
+	return d.nextID
 }
 
 // Store is an in-memory fake of *repo.Store.
 type Store struct {
-	d        *data
-	Users    repo.UserRepo
-	Sessions repo.SessionRepo
-	Settings repo.SettingsRepo
+	d            *data
+	Users        repo.UserRepo
+	Sessions     repo.SessionRepo
+	Settings     repo.SettingsRepo
+	Accounts     repo.AccountRepo
+	Categories   repo.CategoryRepo
+	Envelopes    repo.EnvelopeRepo
+	Allocations  repo.AllocationRepo
+	Transactions repo.TransactionRepo
 }
 
 // NewStore returns an empty in-memory store.
 func NewStore() *Store {
 	d := &data{
-		users:    map[int64]domain.User{},
-		sessions: map[int64]domain.Session{},
-		settings: map[int64]domain.Settings{},
+		users:        map[int64]domain.User{},
+		sessions:     map[int64]domain.Session{},
+		settings:     map[int64]domain.Settings{},
+		accounts:     map[int64]domain.Account{},
+		categories:   map[int64]domain.Category{},
+		envelopes:    map[int64]domain.Envelope{},
+		allocations:  map[int64]domain.Allocation{},
+		transactions: map[int64]domain.Transaction{},
 	}
-	return &Store{d: d, Users: fakeUsers{d}, Sessions: fakeSessions{d}, Settings: fakeSettings{d}}
+	return &Store{
+		d: d, Users: fakeUsers{d}, Sessions: fakeSessions{d}, Settings: fakeSettings{d},
+		Accounts: fakeAccounts{d}, Categories: fakeCategories{d}, Envelopes: fakeEnvelopes{d},
+		Allocations: fakeAllocations{d}, Transactions: fakeTransactions{d},
+	}
 }
 
 // DB satisfies repo.Txer; the fakes ignore the returned value.
