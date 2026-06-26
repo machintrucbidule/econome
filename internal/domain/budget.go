@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // Budget-domain enums (English codes; FR/EN labels live in internal/i18n) and
 // the value structs the pure engine consumes (technical/03 §3, technical/09 §2).
 // These are value types only; their DB tables land in increment 3. Money fields
@@ -196,15 +198,20 @@ func (s EnvelopeState) Valid() bool {
 	}
 }
 
-// Account is a money account (technical/03 §3.1).
+// Account is a money account (technical/03 §3.1). Persistence fields (UserID,
+// timestamps, ExternalRef) are ignored by the engine.
 type Account struct {
 	ID             int64
+	UserID         int64
 	Name           string
 	Type           AccountType
 	MonthEndPolicy MonthEndPolicy
 	FillPriority   *int   // cascade order (savings only); nil if not in the cascade
 	Ceiling        *int64 // minor units; regulatory/chosen cap; nil = no cap
 	Status         ArchiveStatus
+	ExternalRef    *string // DSP2 (anticipated)
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // IsSavings is derived (is_savings ⇔ type != current), never stored
@@ -214,16 +221,20 @@ func (a Account) IsSavings() bool { return a.Type != AccountCurrent }
 // Category is a budget category; budget is posted at the leaf (technical/03 §3.2).
 type Category struct {
 	ID              int64
+	UserID          int64
 	Name            string
 	ParentID        *int64
 	FlowType        FlowType
 	DefaultExpanded bool
 	Status          ArchiveStatus
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // Envelope is a (category, account) budget line with a mode (technical/03 §3.3).
 type Envelope struct {
 	ID            int64
+	UserID        int64
 	CategoryID    int64
 	AccountID     int64
 	Mode          Mode
@@ -232,15 +243,20 @@ type Envelope struct {
 	DueMonths     []int // parsed from the stored CSV (1–12)
 	ExpectedDay   *int
 	Status        ArchiveStatus
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // Allocation is the per-period planned amount for an envelope — the only budget
 // input besides transactions (technical/03 §3.4, L2 non-retroactive).
 type Allocation struct {
 	ID            int64
+	UserID        int64
 	EnvelopeID    int64
 	Period        string // "YYYY-MM"
 	PlannedAmount int64  // minor units, >= 0
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // Transaction is a money movement (technical/03 §3.5). Amount is signed minor
@@ -248,6 +264,7 @@ type Allocation struct {
 // category_id nil).
 type Transaction struct {
 	ID                  int64
+	UserID              int64
 	AccountID           int64
 	DestAccountID       *int64
 	CategoryID          *int64
@@ -257,15 +274,21 @@ type Transaction struct {
 	BudgetPeriod        string
 	Status              TransactionStatus
 	Label               string
+	Note                *string
 	Source              TxnSource
 	ExternalRef         *string
 	PairedTransactionID *int64
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // Snapshot is a monthly gross value for a savings account (technical/03 §4.3).
 type Snapshot struct {
 	ID         int64
+	UserID     int64
 	AccountID  int64
 	Period     string // "YYYY-MM"
 	GrossValue int64  // minor units, >= 0
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
