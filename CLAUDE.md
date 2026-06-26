@@ -105,16 +105,20 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 1 (walking skeleton) — DONE** (PRs #5/#6/#7 merged; CI green; subagent reviews passed).
-End-to-end slice live: owner setup → login → empty three-pane shell → logout, `/healthz`, lockout, CSRF,
-sessions, migrations-with-backup, vendored htmx, `money.go` rendered as `−635,00 €`. Decisions I-001..I-013.
-See `docs/progress/0001-walking-skeleton.md`. **Next: increment 2 = engine + reconciliation (full
-coverage)** (`development-plan/01-phased-plan.md`) — awaiting the user's go-ahead.
+**Increment 2 (engine + reconciliation) — DONE** (PRs #9–#13 merged; CI green; engine + reconciliation
+subagent reviews passed). The pure `internal/engine` (all of `functional/03`: envelope five states,
+balances, low point, savings/secured/cascade, PEA net, net worth, aggregation) and the pure
+`internal/engine/reconcile.go` (the DSP2-shared decision) are sealed at **91.7 %** coverage; golden +
+property + matrix tests. Decisions I-001..I-018. See `docs/progress/0002-engine.md`. **Next: increment 3 =
+data model + repositories** (`development-plan/01-phased-plan.md`) — awaiting the user's go-ahead.
+(Increments 0–1 also done: scaffold, then the walking skeleton — owner setup → login → shell → logout,
+sessions/lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`.)
 
-> Reminders: `main` is protected (all changes via PR → CI green → merge); Dependabot minor/patch auto-merge
-> on green, majors manual (I-008). Local-dev: add `C:\Program Files\Go\bin` + `%USERPROFILE%\go\bin` to PATH;
-> `go test -race` needs cgo (runs in CI on Linux), so locally use `go test ./...`. Open: `chromedp` smoke
-> deferred (O-7, needs CI Chrome).
+> Reminders: `main` is protected — all changes via PR → CI green → merge; required checks now include
+> `e2e chrome smoke` (O-7 resolved). Dependabot minor/patch auto-merge on green, majors manual (I-008).
+> Local-dev: add `C:\Program Files\Go\bin` + `%USERPROFILE%\go\bin` to PATH; `go test -race` needs cgo (runs
+> in CI on Linux) so locally use `go test ./...`; `chromedp` smoke needs `-tags chromedp` + local Chrome.
+> Engine golden fixtures regenerate with `go test -run Golden -update ./internal/engine`.
 
 > **Repo note (I-006).** The published GitHub repo is **public** but `specifications/` is **gitignored**
 > (local-only) — the design dossier + decision logs are not pushed. They remain on this working tree, so
