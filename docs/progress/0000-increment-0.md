@@ -48,24 +48,32 @@ Verified locally with **Go 1.26.4** (all green):
   Windows box); it runs in **CI on ubuntu-latest** where cgo is available. The multi-arch image build is
   likewise a CI gate.
 
-## Exact next step
+## Increment 0 — DONE
 
-1. **(Blocker) Install Go** (latest stable) locally, then from the repo root run, in order:
-   `go mod tidy` · `gofumpt -l .` · `go vet ./...` · `golangci-lint run` · `go test -race ./...` ·
-   `go build ./cmd/econome ./cmd/econome-admin`. Fix any scaffold issue surfaced (esp. the `.golangci.yml`
-   v2 schema and the depguard globs — verify depguard is active by temporarily adding a forbidden import
-   to `internal/engine` and confirming lint fails, then revert).
-2. **Only after step 1 is green** (user chose verify-then-publish): `git init`; initial commit
-   `chore: scaffold repository (increment 0)`; then create a **public** repo `econome` under
-   `machintrucbidule` (`gh repo create econome --public --source=. --remote=origin`) — `specifications/`
-   is gitignored (I-006), so the dossier is not pushed; push; set branch protection on `main` (no
-   direct/force push, linear history, require green CI) via `gh api`. Confirm `git status` shows
-   `specifications/` untracked and the app builds without it.
-3. Confirm CI is green on the scaffold → increment 0 **done**; stop for the user's go-ahead before
-   **increment 1 (walking skeleton)**: specs `functional/01` §2/§3/§7, `02` §1/§9, `technical/04` §1–§2,
-   `05` §1–§4/§6, `08` §1–§3, `06` §3–§4; deliver the migration runner + `0001_init`, owner bootstrap +
-   login + sessions + lockout, the full middleware chain, the empty three-pane shell, the `money.go`
-   banker's-rounding engine call rendered as `−635,00 €`, `/healthz`. Demo **D1**.
+- Repository **published**: https://github.com/machintrucbidule/econome (**public**; `specifications/`
+  gitignored and confirmed not staged — I-006).
+- **CI green on `main`** (run on commit `d55d9da`): format · vet · lint (depguard active) · test
+  (race+coverage) · govulncheck · build, **and** the multi-arch image build (linux/amd64 + arm64). The
+  GHCR publish job correctly skipped (no release tag).
+- **Branch protection on `main`** (G13): PR required (0 approvals — solo self-merge), required checks
+  `format · vet · lint · test · vuln · build` + `multi-arch image build (no push)` (strict/up-to-date),
+  linear history, no force-push, no deletions, enforced on admins.
+- One follow-up CI fix landed (`ci:`): removed an empty `misspell:` settings key that failed
+  `golangci-lint config verify`.
+
+## Exact next step (next run)
+
+**Increment 1 — Walking skeleton** (`development-plan/02-walking-skeleton.md`), after the user's
+go-ahead. Specs: `functional/01` §2/§3/§7, `02` §1/§9, `technical/04` §1–§2, `05` §1–§4/§6, `08` §1–§3,
+`06` §3–§4. Deliver: the hand-rolled migration runner (pre-migration `VACUUM INTO` backup → transactional
+apply → abort-on-failure) + `0001_init` (`user`, `session`, `settings`, `schema_migrations`); first-run
+owner bootstrap + password login + opaque sessions + logout; lockout/throttle; the full middleware chain
+(Recover→RequestContext→Session→AuthGuard→TenantContext→CSRF→Locale); the empty three-pane shell reusing
+`econome.css/js`; the `money.go` banker's-rounding engine call rendered via view/i18n as `−635,00 €`;
+`GET /healthz`. **Also vendor htmx + fonts/icons** into `web/assets` and widen the embed (O-2). Demo **D1**.
+
+> First task next run: add `go.sum` to the Dockerfile `COPY` line when the first dependency
+> (`modernc.org/sqlite`) is introduced (O-5).
 
 ## Open points
 
