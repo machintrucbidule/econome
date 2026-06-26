@@ -10,8 +10,8 @@ ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=dev
 
-# Dependency layer (cached). go.sum is copied once it exists (from increment 1).
-COPY go.mod ./
+# Dependency layer (cached).
+COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
