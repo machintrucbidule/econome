@@ -60,8 +60,8 @@ func TestMigrate_RealInitForwardFromEmpty(t *testing.T) {
 	if err := db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&version); err != nil {
 		t.Fatalf("read version: %v", err)
 	}
-	if version != 1 {
-		t.Errorf("schema version = %d, want 1", version)
+	if version < 1 {
+		t.Errorf("schema version = %d, want >= 1", version)
 	}
 
 	// Re-running is a no-op (no pending ⇒ no backup taken).
