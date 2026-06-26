@@ -293,6 +293,15 @@ func (h *Handlers) accountWriteFailure(w http.ResponseWriter, r *http.Request, i
 	h.mutationError(w, r, err, nil)
 }
 
+// asValidation returns err as a *domain.ValidationError, or nil.
+func asValidation(err error) *domain.ValidationError {
+	var ve *domain.ValidationError
+	if errors.As(err, &ve) {
+		return ve
+	}
+	return nil
+}
+
 func (h *Handlers) localizeFields(r *http.Request, ve *domain.ValidationError) map[string]string {
 	lang := middleware.From(r.Context()).Lang
 	out := make(map[string]string, len(ve.Fields))

@@ -86,3 +86,70 @@ type AccountFormView struct {
 
 // FieldError returns the localised error for a field, or "".
 func (v AccountFormView) FieldError(field string) string { return v.FieldErrors[field] }
+
+// --- Envelopes ---
+
+// EnvelopeRowVM is one envelope row in the configuration list.
+type EnvelopeRowVM struct {
+	ID          int64
+	Name        string
+	AccountName string
+	BadgeClass  string // mb fixe / var / res / rev / xfer
+	BadgeLabel  string
+	FreqLabel   string
+	DefaultStr  string // amount, "auto" (residual), or "—"
+	DayStr      string
+	Archived    bool
+}
+
+// ParentGroupVM is a parent category with its children (read-only sum).
+type ParentGroupVM struct {
+	Key        string // data-k for the expand chevron
+	Name       string
+	ChildCount int
+	SumStr     string
+	Expanded   bool // seeds the open/closed state (category.default_expanded, M4)
+	Children   []EnvelopeRowVM
+}
+
+// EnvelopesView backs GET /config/envelopes.
+type EnvelopesView struct {
+	Base
+	Email       string
+	Nav         string
+	Parents     []ParentGroupVM
+	TopLevel    []EnvelopeRowVM
+	HasArchived bool
+	IsEmpty     bool
+}
+
+// EnvelopeFormView backs the create/edit envelope modal.
+type EnvelopeFormView struct {
+	Base
+	IsEdit          bool
+	ID              int64
+	Name            string
+	FlowType        string
+	Mode            string
+	AccountID       int64
+	DefaultStr      string
+	Frequency       string
+	DueMonth        string // single month value, "" if none
+	ExpectedDayStr  string
+	ParentID        int64 // 0 = none
+	DefaultExpanded bool
+	IsResidual      bool
+	IsFixed         bool
+	NonMonthly      bool
+	AccountOptions  []SelectOption
+	ParentOptions   []SelectOption
+	FlowOptions     []SelectOption
+	ModeOptions     []SelectOption
+	FreqOptions     []SelectOption
+	MonthOptions    []SelectOption
+	FieldErrors     map[string]string
+	FormError       string
+}
+
+// FieldError returns the localised error for a field, or "".
+func (v EnvelopeFormView) FieldError(field string) string { return v.FieldErrors[field] }

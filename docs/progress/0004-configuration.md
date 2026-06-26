@@ -1,7 +1,7 @@
 # Increment 4 — Configuration (Paramètres + Enveloppes)
 
-**Date.** 2026-06-26 · **Milestone.** M1 · **Status.** IN PROGRESS — **PR-a (Paramètres) done**, PR-b
-(Enveloppes) pending. Delivered as two sub-PRs (I-023).
+**Date.** 2026-06-26 · **Milestone.** M1 · **Status.** DONE (both sub-PRs merged; CI green). Delivered as
+two sub-PRs (I-023): PR-a Paramètres (#19), PR-b Enveloppes (#20).
 
 ## PR-a — Paramètres (`/config/parameters`)
 
@@ -60,16 +60,56 @@ are latent for config edits), `technical/04` §3.5/§3.7 (routes) + §4 (payload
   card swap shows the new account. (Login-shell smoke still green.)
 - Full suite green; `gofumpt`/`golangci-lint` clean; engine coverage gate 91.7%.
 
+## PR-b — Enveloppes (`/config/envelopes`)
+
+The combined category+envelope CRUD screen (I-021, user-validated inline-parent path), reusing every PR-a
+foundation (shared `rail`/`confhead`/`confscripts`, `config.css`, `app.js`, `#modal-host` choreography,
+`mutationError` mapper).
+
+### What was built
+
+- **Service** (`internal/services/envelopes.go`): `EnvelopesOverview` (hierarchical list: parent groups +
+  read-only **exact integer** default-sums + top-level rows), `ParentOptions`, `GetEnvelope`,
+  `CreateEnvelope`/`UpdateEnvelope` (one tx: resolve/find-or-create parent → find-or-create **leaf category
+  by (name, parent, flow_type)** so a category may pair with several accounts → create/update envelope),
+  `ArchiveEnvelope`/`UnarchiveEnvelope`/`DeleteEnvelope`. **Inline new parent** (`NewParentName` find-or-
+  create; `default_expanded` seeded only at parent creation, never silently flipped on a child edit).
+  Validation (typed 422, no partial write): name required; (category×account) unique → field 422;
+  `fixed_recurring`⇒frequency; non-monthly⇒due_months; `expected_day` 1..31; `residual` ⇒ no amount +
+  **never deletable/archivable** (structural); `default_amount ≥ 0`; **flow_type must match the parent
+  branch** (MsgFlowTypeConflict). Archive-vs-delete by dependents (FK-RESTRICT→archive).
+- **Handlers** (`internal/handlers/envelopes.go`): full screen, modal form (field adaptation flags set
+  server-side + `app.js` delegated `change`), create/update/archive/unarchive/delete. Mode/flow **badge**
+  (residual > income/transfer flow > mode) + frequency label (with due-month names) computed in the handler.
+- **Templates** (`web/templates/envelopes.html`): hierarchical `.etable` (parent `.tog` rows with the
+  CSP-clean `data-action="toggle-group"` chevron + `.child`/`data-c` rows seeded open by
+  `category.default_expanded`, mode badges `.mb.*`, `auto` for residual, archived rows behind the toggle),
+  the `envelope-form` modal (native `<select>`s, `.off`/`hidden` adaptation, inline new-parent input, the L2
+  note), empty-state. The Enveloppes header tab is now a **live link** (both screens). `config.css` gained
+  the envelopes/badge styles; `app.js` gained `adaptEnvelope` + the group toggle.
+- **i18n**: full Enveloppes + month + `validation.envelope.*`/`validation.category.*` keys in both catalogs.
+
+### Tests passing
+
+- **Service integration**: inline new-parent + reuse; **shared category across two accounts** (one category,
+  two envelopes) + (category×account) duplicate 422; fixed/frequency/due-months validation; residual no-amount
+  + non-deletable; flow-type-vs-parent conflict; archive-when-dependents (allocation FK); cross-tenant ⇒
+  ErrNotFound; **parent read-only sum = Σ children** (exact).
+- **e2e backbone**: empty state; create-with-new-parent → OOB list shows the row under its parent; duplicate
+  422; fixed-without-frequency 422 with inline error.
+- **chromedp smoke**: envelope modal opens (htmx, CSP-clean), mode change un-dims the frequency field
+  (`adaptEnvelope`), submit → OOB list shows the new row. (PR-a smokes still green.)
+- Full suite + lint + vet + govulncheck clean; engine coverage gate 91.7% holds.
+
 ## Exact next step
 
-**PR-b — Enveloppes (`/config/envelopes`)**: the combined category+envelope CRUD form (I-021), hierarchical
-list (parent category rows + child envelope rows, mode badges, show-archived), field adaptation by
-mode/frequency, the modal reusing the shared `confhead`/`confscripts`/`config.css` + `app.js`. Services
-`internal/services/envelopes.go`: (category×account) uniqueness, fixed_recurring⇒frequency, non-monthly⇒
-due_months, residual no-amount + non-deletable, no-cyclic-parent, flow_type edit legality, archive-vs-delete;
-engine parent-sum = Σ children (reuse inc 2). Add the `validation.envelope.*`/`validation.category.*` keys
-(already constants in `domain/validate_config.go`) to both catalogs; turn the disabled Enveloppes tab into a
-live link. Specs `functional/08` (whole), `functional/04` §3.2–§3.3, `technical/04` §3.5.
+**Increment 5 — Month-initialisation assistant** (`development-plan/01-phased-plan.md`): compute the editable
+non-persisted draft (starting balances, posts table, residual encart), `POST /month-init` materialising
+allocations + awaited transactions + the `period` row in one tx; recurring generation from the envelopes
+built here; the locked-month guard (`ensureEditable`, already in place from PR-a) becomes load-bearing. Specs
+`functional/09`, `functional/04` §3.4/§4, `rules` §5/§7/§8/§11.1, `technical/04` §3.6, `technical/03`
+§3.4/§4.1. Demo **D2** follows. Depends on inc 2 (residual engine), 3 (repos+period), 4 (config to generate
+from).
 
 ## Open points
 
@@ -84,3 +124,12 @@ live link. Specs `functional/08` (whole), `functional/04` §3.2–§3.3, `techni
   as-is for now (the landing shell is replaced by the real Budget screen in inc 6).
 - The custom `emMenu` selects (mockup visual) are deferred (I-024); native controls are used. `app.js` keeps
   the drag/toggle/modal behaviours.
+- **O-14 (envelope form / transfer).** A **transfer** envelope is a category with `flow_type='transfer'` +
+  one account; the `envelope` table has **no destination column** (`technical/03` §3.3 — "the envelope
+  inherits flow via its category"). The transfer destination is therefore set when a transfer transaction is
+  created (journal/month-init, inc 5/6), not on the template. If inc 5's recurring transfer generation needs
+  a stored destination, that is a `technical/03` change (raise it there first). No reshape now.
+- **O-15 (default_expanded edit).** In PR-b, `category.default_expanded` is seeded only when a **new** parent
+  is created (not flipped from a child's form, to avoid a surprising side effect). There is no direct UI to
+  toggle an existing parent's seed; this is acceptable because the per-user persisted open/closed state (M4,
+  `PUT /ui/expand`) lands in inc 6 and overrides the seed anyway.

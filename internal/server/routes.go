@@ -64,6 +64,16 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	mux.Handle("POST /config/accounts/reorder", protected(http.HandlerFunc(h.CascadeReorder)))
 	mux.Handle("PATCH /config/settings", protected(http.HandlerFunc(h.SettingsPatch)))
 
+	// Configuration — Envelopes (increment 4, PR-b).
+	mux.Handle("GET /config/envelopes", protected(http.HandlerFunc(h.EnvelopesGet)))
+	mux.Handle("GET /config/envelopes/new", protected(http.HandlerFunc(h.EnvelopeFormGet)))
+	mux.Handle("GET /config/envelopes/{id}/edit", protected(http.HandlerFunc(h.EnvelopeFormGet)))
+	mux.Handle("POST /config/envelopes", protected(http.HandlerFunc(h.EnvelopeCreate)))
+	mux.Handle("PATCH /config/envelopes/{id}", protected(http.HandlerFunc(h.EnvelopeUpdate)))
+	mux.Handle("POST /config/envelopes/{id}/archive", protected(http.HandlerFunc(h.EnvelopeArchive)))
+	mux.Handle("POST /config/envelopes/{id}/unarchive", protected(http.HandlerFunc(h.EnvelopeUnarchive)))
+	mux.Handle("DELETE /config/envelopes/{id}", protected(http.HandlerFunc(h.EnvelopeDelete)))
+
 	return &http.Server{
 		Addr:              cfg.Listen,
 		Handler:           mux,
