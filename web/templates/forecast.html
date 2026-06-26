@@ -1,0 +1,167 @@
+{{define "forecast"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "head" .}}<title>{{.T "forecast.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="app" hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
+
+  <aside class="rail">
+    <a class="logo" href="/" style="text-decoration:none"><span class="lg-full">Econo<b>Me</b></span><span class="lg-mini">E<b>m</b></span></a>
+    <nav class="nav">
+      <a {{if eq .Nav "budget"}}class="on"{{end}} href="/"><span class="i">▤</span><span class="label">{{.T "nav.budget"}}</span></a>
+      <a {{if eq .Nav "patrimoine"}}class="on"{{end}} href="/"><span class="i">◴</span><span class="label">{{.T "nav.patrimoine"}}</span></a>
+      <a {{if eq .Nav "configuration"}}class="on"{{end}} href="/config/parameters"><span class="i">⚙</span><span class="label">{{.T "nav.configuration"}}</span></a>
+    </nav>
+    <div>
+      <div class="raillab">{{.T "shell.scope"}}</div>
+      {{range .Scopes}}
+        <a class="acct{{if .IsAll}} all{{else}} cur{{end}}{{if .On}} on{{end}}" href="/?period={{$.Period}}&scope={{.Key}}">
+          <span class="adot"></span>{{if .IsAll}}<span class="mc">∑</span>{{end}}<div class="ai"><div class="nm">{{.Name}}</div><small>{{.Note}}</small></div>
+        </a>
+      {{end}}
+    </div>
+    <div class="railsp"></div>
+    <div class="me">
+      <button class="iconbtn" type="button" data-action="theme-toggle" title="{{.T "shell.theme"}}">◐</button>
+      <span>{{.Email}}</span>
+      <form method="post" action="/logout" style="display:inline">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <button class="btn" type="submit">{{.T "shell.logout"}}</button>
+      </form>
+    </div>
+  </aside>
+
+  <main class="center">
+    <header class="head">
+      <button class="iconbtn btn-left" type="button" data-action="nav-left" title="{{.T "shell.collapse_rail"}}">☰</button>
+      <h1>{{.T "forecast.title"}}</h1>
+      <div class="mnav">
+        <a class="iconbtn" href="/?period={{.PrevPeriod}}&scope={{.Scope}}" title="{{.T "forecast.month.prev"}}">‹</a>
+        <button class="m" type="button" data-action="toggle-picker">{{.MonthLabel}}</button>
+        <a class="iconbtn" href="/?period={{.NextPeriod}}&scope={{.Scope}}" title="{{.T "forecast.month.next"}}">›</a>
+        <div class="mp{{if .PickerOpen}} open{{end}}" id="mp">
+          <div class="mp-y">
+            <button type="button" data-action="goto" data-href="/?period={{.PrevYearPeriod}}&scope={{.Scope}}&pick=1">‹</button>
+            <span>{{.YearLabel}}</span>
+            <button type="button" data-action="goto" data-href="/?period={{.NextYearPeriod}}&scope={{.Scope}}&pick=1">›</button>
+          </div>
+          <div class="mp-g">
+            {{range .MonthCells}}<button type="button" data-action="goto" data-href="/?period={{.Period}}&scope={{$.Scope}}"{{if .On}} class="cur"{{end}}>{{.Label}}</button>{{end}}
+          </div>
+        </div>
+      </div>
+      <div class="sp"></div>
+      <div class="tabs"><a class="on" href="/?period={{.Period}}&scope={{.Scope}}">{{.T "forecast.tab.forecast"}}</a><a href="/journal?period={{.Period}}&scope={{.Scope}}">{{.T "forecast.tab.journal"}}</a></div>
+      <button class="iconbtn btn-right" type="button" data-action="nav-right" title="{{.T "shell.toggle_panel"}}">⟩</button>
+    </header>
+
+    <div class="cbody">
+      {{if .Locked}}<div class="lockbar">🔒 {{.T "forecast.locked"}}</div>{{end}}
+
+      {{if .NotCreated}}
+        <section class="empty">
+          <h3>{{.T "forecast.notcreated.title"}}</h3>
+          <p>{{.T "forecast.notcreated.body"}} {{.MonthLabel}}.</p>
+          <a class="btn primary" href="/month-init?period={{.Period}}">{{.T "forecast.notcreated.action"}} {{.MonthLabel}}</a>
+        </section>
+      {{else}}
+        <table>
+          <thead><tr><th>{{.T "forecast.col.post"}}</th><th class="n">{{.T "forecast.col.planned"}}</th><th class="n">{{.T "forecast.col.real"}}</th><th class="n">{{.T "forecast.col.remaining"}}</th><th>{{.T "forecast.col.state"}} <span class="help" tabindex="0" data-tip="{{.T "forecast.state.help"}}">?</span></th></tr></thead>
+          <tbody>
+          {{if .Empty}}
+            <tr><td colspan="5" style="color:var(--muted);padding:18px">{{.T "forecast.empty.body"}}</td></tr>
+          {{end}}
+          {{range .Rows}}
+            {{if .IsParent}}
+              {{$pk := .Key}}
+              <tr class="tog" data-action="toggle-row" data-k="{{.Key}}">
+                <td><div class="nm"><button class="chev" type="button" tabindex="-1">›</button>{{.Name}}</div></td>
+                <td class="n">{{.PlannedStr}}</td>
+                <td class="n">{{.RealStr}}</td>
+                <td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>
+                <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span><span class="agg">{{$.T "forecast.agg"}}</span></td>
+              </tr>
+              {{range .Children}}
+                <tr class="child hidden" data-c="{{$pk}}">
+                  <td><div class="nm">{{.Name}}</div></td>
+                  <td class="n">{{.PlannedStr}}</td>
+                  <td class="n{{if .RealNeg}} neg{{end}}">{{.RealStr}}</td>
+                  <td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>
+                  <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span></td>
+                </tr>
+              {{end}}
+            {{else if .ShowPill}}
+              <tr>
+                <td><div class="nm">{{.Name}} <span class="pill-acc">{{.AccountName}}</span></div>{{if .HasBar}}<div class="bar"><i style="width:{{.BarPercent}}%;background:var(--{{.BarClass}})"></i></div>{{end}}</td>
+                <td class="n">{{.PlannedStr}}</td>
+                <td class="n{{if .RealNeg}} neg{{end}}{{if .Income}} pos{{end}}">{{.RealStr}}</td>
+                {{if .RemainDash}}<td class="n" style="color:var(--faint)">—</td>{{else}}<td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>{{end}}
+                <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span></td>
+              </tr>
+            {{else}}
+              <tr class="tog" data-action="toggle-row" data-k="{{.Key}}">
+                <td><div class="nm"><button class="chev" type="button" tabindex="-1">›</button>{{.Name}}</div>{{if .HasBar}}<div class="bar"><i style="width:{{.BarPercent}}%;background:var(--{{.BarClass}})"></i></div>{{end}}</td>
+                <td class="n">{{.PlannedStr}}</td>
+                <td class="n{{if .RealNeg}} neg{{end}}{{if .Income}} pos{{end}}">{{.RealStr}}</td>
+                {{if .RemainDash}}<td class="n" style="color:var(--faint)">—</td>{{else}}<td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>{{end}}
+                <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span></td>
+              </tr>
+              <tr class="drill hidden" data-d="{{.Key}}">
+                <td colspan="5"><div class="di">
+                  <div class="dh"><span>{{if .Drill}}{{$.T "forecast.drill.title"}}{{else}}{{$.T "forecast.drill.empty"}}{{end}}</span><a class="jlink" href="/journal?period={{$.Period}}&scope={{$.Scope}}">{{$.T "forecast.drill.open"}}</a></div>
+                  {{if .Drill}}<table>{{range .Drill}}<tr><td>{{.Label}}</td><td{{if .Approx}} style="color:var(--faint)"{{end}}>{{.DateStr}}</td><td class="n{{if .AmountNeg}} neg{{end}}">{{.AmountStr}}</td><td><span class="pill {{.StatusClass}}">{{.StatusLabel}}</span></td></tr>{{end}}</table>{{end}}
+                </div></td>
+              </tr>
+            {{end}}
+          {{end}}
+          </tbody>
+          <tfoot><tr><td>{{.T "forecast.total"}}</td><td class="n">{{.Total.PlannedStr}}</td><td class="n">{{.Total.RealStr}}</td><td class="n{{if .Total.RemainNeg}} neg{{end}}">{{.Total.RemainStr}}</td><td></td></tr></tfoot>
+        </table>
+
+        {{if .HasHiddenTransfers}}<div style="color:var(--faint);font-size:12.5px;margin:-6px 2px 14px">↳ {{.T "forecast.hidden_transfers"}}</div>{{end}}
+
+        {{if .TimelineSVG}}
+        <div class="tl">
+          <div class="t">{{.TimelineTitle}}</div>
+          {{.TimelineSVG}}
+          <div class="leg">{{range .TimelineLegend}}<span><span class="sw" style="{{if .Hollow}}border:2px solid {{.Color}};background:var(--surface){{else}}background:{{.Color}}{{end}}"></span>{{.Label}}</span>{{end}}</div>
+        </div>
+        {{end}}
+      {{end}}
+    </div>
+  </main>
+
+  <aside class="right" id="rightpanel">
+    {{if not .NotCreated}}
+    <section>
+      <div class="figs">
+        {{range .Figures}}
+          <div class="fig{{if .Mod}} {{.Mod}}{{end}}"><div class="l">{{.Label}}{{if .Help}} <span class="help" tabindex="0" data-tip="{{.Help}}">?</span>{{end}}</div><div class="v">{{.Value}}</div>{{if .Sub}}<div class="s">{{.Sub}}</div>{{end}}</div>
+        {{end}}
+      </div>
+
+      {{range .Encarts}}
+        {{if eq .Kind "negative"}}
+          <div class="save danger"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div><button type="button" disabled>{{$.T "forecast.save.transfer"}}</button></div>
+        {{else if eq .Kind "cascade"}}
+          <div class="save full"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div><a class="savebtn" href="/config/parameters">{{.ActionLabel}}</a></div>
+        {{else}}
+          <div class="save"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div><button type="button" disabled>{{.ActionLabel}}</button></div>
+        {{end}}
+      {{end}}
+
+      {{if .CarryNote}}<div class="note"><b>{{.T "forecast.carry.title"}}</b><br>{{.T "forecast.carry.body"}}</div>{{end}}
+
+      {{if .HasWatch}}
+        <div class="watch"><div class="l">{{.T "forecast.watch.title"}}</div>
+          {{range .Watch}}<div class="wr"><span>{{.Label}}</span><b{{if .Bad}} style="color:var(--bad)"{{end}}>{{.ValueStr}}</b></div>{{end}}
+        </div>
+      {{end}}
+    </section>
+    {{end}}
+  </aside>
+
+</div>
+<div id="tt"></div>
+{{template "appscripts" .}}
+</body>
+</html>{{end}}

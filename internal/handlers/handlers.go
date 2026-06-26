@@ -15,10 +15,6 @@ import (
 	"econome/internal/view"
 )
 
-// demoBalanceMinor is the placeholder figure rendered in the empty shell to
-// prove the engine→view→i18n path (−635,00 €). Real figures land in increment 6.
-const demoBalanceMinor int64 = -63500
-
 // Handlers holds the transport dependencies.
 type Handlers struct {
 	svc          *services.Service
@@ -137,13 +133,6 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	middleware.ClearSessionCookie(w)
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
-}
-
-// Home renders the empty three-pane shell.
-func (h *Handlers) Home(w http.ResponseWriter, r *http.Request) {
-	c := middleware.From(r.Context())
-	v := view.ShellView{Base: h.base(r), Email: c.User.Email, DemoBalanceMinor: demoBalanceMinor}
-	h.render(w, http.StatusOK, "home", v)
 }
 
 func (h *Handlers) startSession(w http.ResponseWriter, res *services.AuthResult) {

@@ -14,7 +14,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 
 	"econome/internal/config"
-	"econome/internal/domain"
 	"econome/internal/i18n"
 	"econome/internal/repo"
 	"econome/internal/server"
@@ -126,11 +125,13 @@ func TestWalkingSkeletonFlow(t *testing.T) {
 		t.Fatalf("setup = %d -> %q, want 303 /", resp.StatusCode, resp.Header.Get("Location"))
 	}
 
-	// The shell renders, authenticated, with the demo amount + logout.
+	// The forecast (budget landing) renders, authenticated: with no month yet
+	// created it shows the "month not created" state offering the assistant.
 	home := getBody(t, client, base, "/")
-	wantMoney := i18n.FormatMoney(-63500, domain.LangFR, "EUR")
-	if !strings.Contains(home, wantMoney) {
-		t.Errorf("shell missing money %q", wantMoney)
+	for _, want := range []string{"Prévisionnel", "Ce mois n'est pas encore créé", "Préparer"} {
+		if !strings.Contains(home, want) {
+			t.Errorf("forecast landing missing %q", want)
+		}
 	}
 	if !strings.Contains(home, "owner@example.org") || !strings.Contains(home, "Se déconnecter") {
 		t.Error("shell missing email or logout control")
@@ -211,6 +212,32 @@ func TestAuthStylesheetDefinesLayoutClasses(t *testing.T) {
 	} {
 		if !strings.Contains(css, sel) {
 			t.Errorf("econome.css missing auth-layout selector %q (auth pages would render unstyled)", sel)
+		}
+	}
+}
+
+// TestForecastStylesheetDefinesClasses guards the forecast screen against the
+// same regression as the auth pages (#24): every design-system class the
+// forecast template depends on must be defined in the served stylesheet.
+func TestForecastStylesheetDefinesClasses(t *testing.T) {
+	ts, client := newTestServer(t)
+	resp, err := client.Get(ts.URL + "/assets/econome.css")
+	if err != nil {
+		t.Fatalf("GET econome.css: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read css: %v", err)
+	}
+	css := string(body)
+	for _, sel := range []string{
+		".tog", ".chev", ".child", ".drill", ".di", ".dh", ".jlink", ".bar",
+		".pill", ".agg", ".pill-acc", ".tl", ".chart", ".leg", ".figs", ".fig",
+		".save", ".watch", ".mnav", ".mp", ".tabs", ".lockbar",
+	} {
+		if !strings.Contains(css, sel) {
+			t.Errorf("econome.css missing forecast selector %q", sel)
 		}
 	}
 }

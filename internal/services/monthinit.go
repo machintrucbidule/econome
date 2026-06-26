@@ -300,13 +300,17 @@ func defaultMagnitude(e domain.Envelope) int64 {
 	return *e.DefaultAmount
 }
 
-// signedAmount applies the signed-amount convention (I-017): expense negative,
-// income/transfer positive.
+// signedAmount applies the signed-amount convention (I-017/I-031): income is
+// positive (money enters the source account); an expense **and** an internal
+// transfer are negative — both leave the envelope's source account. The engine
+// applies a transfer's stored amount to the source leg and its negation to the
+// destination (engine balances: source −X, dest +X), so a funding transfer
+// (source → dest) must store a negative magnitude.
 func signedAmount(flow domain.FlowType, magnitude int64) int64 {
-	if flow == domain.FlowExpense {
-		return -magnitude
+	if flow == domain.FlowIncome {
+		return magnitude
 	}
-	return magnitude
+	return -magnitude
 }
 
 // postCategoryID returns the transaction's category id: nil for transfers,

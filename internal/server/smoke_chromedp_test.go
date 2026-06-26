@@ -28,7 +28,7 @@ func TestSmokeLoginRendersShell(t *testing.T) {
 	ctx, cancelT := context.WithTimeout(ctx, 40*time.Second)
 	defer cancelT()
 
-	var shellClass, demoText string
+	var shellClass, h1Text string
 	err := chromedp.Run(
 		ctx,
 		chromedp.Navigate(ts.URL+"/login"),
@@ -36,9 +36,9 @@ func TestSmokeLoginRendersShell(t *testing.T) {
 		chromedp.SendKeys(`#email`, "owner@example.org", chromedp.ByID),
 		chromedp.SendKeys(`#password`, "Tr0ub4dour&3xtra", chromedp.ByID),
 		chromedp.Submit(`#password`, chromedp.ByID),
-		chromedp.WaitVisible(`.app`, chromedp.ByQuery), // the three-pane shell
+		chromedp.WaitVisible(`.app`, chromedp.ByQuery), // the three-pane budget shell (forecast)
 		chromedp.AttributeValue(`.app`, "class", &shellClass, nil),
-		chromedp.Text(`#demo-balance`, &demoText, chromedp.ByID),
+		chromedp.Text(`.center h1`, &h1Text, chromedp.ByQuery),
 	)
 	if err != nil {
 		t.Fatalf("chromedp smoke: %v", err)
@@ -46,8 +46,53 @@ func TestSmokeLoginRendersShell(t *testing.T) {
 	if !strings.Contains(shellClass, "app") {
 		t.Errorf("shell not rendered (class=%q)", shellClass)
 	}
-	if strings.TrimSpace(demoText) == "" {
-		t.Error("demo balance not rendered in the insights panel")
+	if !strings.Contains(h1Text, "Prévisionnel") {
+		t.Errorf("forecast landing not rendered (h1=%q)", h1Text)
+	}
+}
+
+// TestSmokeForecastRowExpand proves the forecast row drill-down toggles client-
+// side under the app's CSP (no inline handlers): clicking a leaf row reveals its
+// read-only transaction drill-down via the delegated data-action in app.js.
+func TestSmokeForecastRowExpand(t *testing.T) {
+	ts, client := setupOwner(t)
+	base := ts.URL
+	fID := mkAccountID(t, base, client, "Fortuneo", "current", "sweep")
+	mkEnvHTTP(t, base, client, url.Values{
+		"name": {"Loyers"}, "flow_type": {"expense"}, "account_id": {fID},
+		"mode": {"fixed_recurring"}, "default_amount": {"1050,00"}, "frequency": {"monthly"}, "expected_day": {"5"},
+	})
+	tok := csrfToken(t, client, base, "/config/parameters")
+	bodyOf(t, formReq(t, client, "POST", base+"/month-init?period=2026-06", url.Values{"_csrf": {tok}}))
+
+	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true))...)
+	defer cancelAlloc()
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+	ctx, cancelT := context.WithTimeout(ctx, 50*time.Second)
+	defer cancelT()
+
+	var drillHidden bool
+	err := chromedp.Run(
+		ctx,
+		chromedp.Navigate(ts.URL+"/login"),
+		chromedp.WaitVisible(`#email`, chromedp.ByID),
+		chromedp.SendKeys(`#email`, "owner@example.org", chromedp.ByID),
+		chromedp.SendKeys(`#password`, "Tr0ub4dour&3xtra", chromedp.ByID),
+		chromedp.Submit(`#password`, chromedp.ByID),
+		chromedp.WaitVisible(`.app`, chromedp.ByQuery),
+		chromedp.Navigate(ts.URL+"/?period=2026-06&scope="+fID),
+		chromedp.WaitVisible(`tr.tog`, chromedp.ByQuery),
+		chromedp.Click(`tr.tog`, chromedp.ByQuery),
+		chromedp.Sleep(150*time.Millisecond),
+		chromedp.Evaluate(`document.querySelector('tr.drill').classList.contains('hidden')`, &drillHidden),
+	)
+	if err != nil {
+		t.Fatalf("chromedp forecast expand smoke: %v", err)
+	}
+	if drillHidden {
+		t.Error("clicking a leaf row should reveal its drill-down (still hidden)")
 	}
 }
 

@@ -126,21 +126,29 @@ A8's length) + wired the home shell's dead "Configuration" nav link to `/config/
 parser accepts a `.` as decimal in fr-FR when unambiguous, fixing a ×100 (**I-030**). Added
 `scripts/clean.bat` (fresh DB, with confirmation).
 
-**Next: increment 6 = Forecast + Journal + reconciliation orchestration** (Milestone M2; `functional/05`/`06`,
-`04` §3.4/§3.5/§6/§7, `rules` §2–§11/§14, `technical/04` §3.2–§3.3) — **awaiting the user's go-ahead**; demo
-**D3** follows. **Agreed delivery (user, this session): 4 small sequential PRs** — **6a** Forecast read-only
-(hierarchy + 5-state badges, figures, treasury-timeline SVG, 3 scope variants sweep/carry/aggregated,
-read-only drill-down, states); **6b** Forecast inline `Prévu` edit + live recompute (recalc-matrix OOB
-fragments) + end-of-month transfer + the locked-month guard; **6c** Journal (quick-entry, whole-cell inline
-edit, sort/filter, transfer rows, atomic delete L8); **6d** reconciliation orchestration via the pure
-`engine.Reconcile`/`PairTransfer` (edit-in-place, no duplicate L6, variance→residual) + `label_mapping`
-autocomplete + `ui_preference` expand — **mandatory subagent review on the reconciliation path**, then
-close-out + D3. Open points **O-16** (no opening-balance column), **O-17** (snapshots-at-init for
-cascade-full), **O-18** (sweep start≈0 depends on the close increment's sweep txn); plus **O-19**: `e2e chrome
-smoke` is **flaky** (Chrome websocket-launch timeout; failed then passed on re-run on #24/#25 — worth
-hardening the launch/timeout); **O-20**: the increment-1 placeholder home shell (`home.html`) still uses inline
-`onclick` toggles that CSP blocks (theme/panel buttons inert) — superseded when 6a builds the real budget
-shell, fix there.
+**Increment 6 = Forecast + Journal + reconciliation orchestration** (Milestone M2) is being delivered as
+**4 small sequential PRs**; demo **D3** follows 6d.
+
+**6a (Forecast read-only) — DONE** (all gates green; awaiting the user's go-ahead before 6b). The forecast is
+now the **budget landing** at `GET /{$}` (replacing the retired `home.html` placeholder — **O-20 resolved**):
+the envelope hierarchy with **5-state leaf badges + rolled-up parent badges** (M2), the right insights panel
+(figures + savings encart + à surveiller), the **server-rendered treasury-timeline SVG** (M17), the 3 scope
+variants (sweep/carry/aggregated), the read-only transaction drill-down (D2), and the not-created/empty/locked
+states. New: `services/forecast.go` (read-model via the `engineInputs` seam), `view/forecast.go` (+ the SVG
+renderer), `handlers/forecast.go`, `web/templates/forecast.html` (the real CSP-clean budget shell). Fixed a
+latent increment-5 sign bug (**I-031**): internal-transfer txns are now stored source-signed (negative) so the
+engine's balances/timeline/carry-funding figure are correct. Independent spec review of the read-model + sign
+fix: **no correctness bugs**. See `docs/progress/0006-budget-core.md`.
+
+**Next: 6b** — Forecast inline `Prévu` edit + live recompute (recalc-matrix OOB fragments) + end-of-month
+transfer (the "Virer" button renders **disabled** in 6a) + the locked-month edit guard. Then **6c** Journal
+(quick-entry, whole-cell inline edit, sort/filter, transfer rows, atomic delete L8); **6d** reconciliation
+orchestration via the pure `engine.Reconcile`/`PairTransfer` (edit-in-place, no duplicate L6,
+variance→residual) + `label_mapping` autocomplete + `ui_preference` expand — **mandatory subagent review on
+the reconciliation path**, then close-out + D3. Open points **O-16** (no opening-balance column), **O-17**
+(snapshots-at-init for cascade-full), **O-18** (sweep start≈0 depends on the close increment's sweep txn),
+**O-19** `e2e chrome smoke` flaky (Chrome websocket-launch timeout), **O-21** (savings accounts not yet listed
+in the forecast rail — deferred to inc 7 so the Patrimoine link has a destination).
 (Increments 0–4 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
 lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; the sealed pure engine + reconciliation
 at 91.7 %; the full budget schema + `user_id`-scoped repos + fakes; and both configuration screens

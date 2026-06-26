@@ -50,7 +50,9 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	mux.Handle("POST /login/totp", public(http.HandlerFunc(h.LoginTOTP)))
 
 	mux.Handle("POST /logout", protected(http.HandlerFunc(h.Logout)))
-	mux.Handle("GET /{$}", protected(http.HandlerFunc(h.Home)))
+
+	// Budget — Prévisionnel (forecast) is the landing screen (functional/02 §6).
+	mux.Handle("GET /{$}", protected(http.HandlerFunc(h.ForecastGet)))
 
 	// Configuration — Paramètres (increment 4, PR-a).
 	mux.Handle("GET /config/parameters", protected(http.HandlerFunc(h.ParametersGet)))
