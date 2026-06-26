@@ -7,8 +7,8 @@ import (
 	"unicode/utf8"
 )
 
-// PasswordMinLength is the §9 minimum (decision A8).
-const PasswordMinLength = 12
+// PasswordMinLength is the §9 minimum (decision A8, length reduced 12→8 by M27).
+const PasswordMinLength = 8
 
 // Message keys (resolved to localised text by the view layer).
 const (

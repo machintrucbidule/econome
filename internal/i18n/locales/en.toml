@@ -36,7 +36,7 @@
 "login.locked" = "Too many attempts. Try again in {0} s."
 "login.totp_not_enabled" = "Two-factor authentication is not enabled."
 
-"password.rule.min" = "At least 12 characters"
+"password.rule.min" = "At least 8 characters"
 "password.rule.lower" = "A lowercase letter"
 "password.rule.upper" = "An uppercase letter"
 "password.rule.digit" = "A digit"
@@ -44,7 +44,7 @@
 
 "validation.email.required" = "Email address is required."
 "validation.email.invalid" = "Invalid email address."
-"validation.password.too_short" = "Password must be at least 12 characters."
+"validation.password.too_short" = "Password must be at least 8 characters."
 "validation.password.classes" = "Password must contain lowercase, uppercase, digit and symbol."
 "validation.password.mismatch" = "Passwords do not match."
 
