@@ -105,10 +105,12 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 0 (environment & repository setup) — in progress / completing.** Scaffold, tooling, CI, and
-context artefacts created; build/test/CI verification **pending a local Go install** (blocker O-1). Next:
-see the latest entry → `docs/progress/0000-increment-0.md`. After increment 0's go-ahead, **increment 1 =
-walking skeleton** (`development-plan/02-walking-skeleton.md`).
+**Increment 0 (environment & repository setup) — DONE.** Scaffold, tooling, CI, and context artefacts
+created and verified; repo published (public) at https://github.com/machintrucbidule/econome with
+`main` protected and CI green; Go pinned 1.26.4. Decisions I-001..I-007. See
+`docs/progress/0000-increment-0.md`. **Next: increment 1 = walking skeleton**
+(`development-plan/02-walking-skeleton.md`) — awaiting the user's go-ahead. Note: `main` is protected, so
+all further changes land via **PR** (branch → CI green → merge).
 
 > **Repo note (I-006).** The published GitHub repo is **public** but `specifications/` is **gitignored**
 > (local-only) — the design dossier + decision logs are not pushed. They remain on this working tree, so
