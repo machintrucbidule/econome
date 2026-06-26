@@ -9,6 +9,7 @@ import (
 
 	"econome/internal/domain"
 	"econome/internal/engine"
+	"econome/internal/repo"
 )
 
 // Forecast read-model (functional/05, increment 6a). Read-only: it assembles the
@@ -78,6 +79,7 @@ type ForecastFigures struct {
 	HasIncomingXfer bool
 	HasProjectedEnd bool
 	HasLowPoint     bool
+	ResidualNeg     bool // an in-scope sweep residual is negative → Point bas turns red (§4a)
 }
 
 // ForecastEncart is a sweep account's savings band (residual / negative / cascade).
@@ -85,8 +87,10 @@ type ForecastEncart struct {
 	Kind        string // residual | negative | cascade
 	AccountName string
 	TargetName  string
+	SweepID     int64
 	Secured     int64 // prudent figure
 	Projected   int64 // if-the-budget-holds figure
+	ToSave      int64 // realised residual — the end-of-month transfer amount
 }
 
 // ForecastWatch is one "à surveiller" item.
@@ -122,6 +126,7 @@ type ForecastData struct {
 	Period    string
 	Exists    bool
 	Locked    bool
+	Editable  bool // active month (exists && !locked) → mutations allowed
 	Empty     bool // created but no rows in scope
 	Scope     string
 	ScopeKind string
@@ -163,6 +168,7 @@ func (s *Service) Forecast(ctx context.Context, userID int64, period, scope stri
 	default:
 		return nil, err
 	}
+	d.Editable = d.Exists && !d.Locked
 
 	in, err := s.engineInputs(ctx, q, userID, period)
 	if err != nil {
@@ -195,6 +201,95 @@ func (s *Service) Forecast(ctx context.Context, userID int64, period, scope stri
 	d.Timeline = s.timeline(in, inScope, d.ScopeKind)
 
 	return d, nil
+}
+
+// EditAllocation upserts the planned amount of one envelope for an open period —
+// the inline `Prévu` edit of the forecast (functional/04 §3.4, §6). It enforces
+// the locked-month guard, rejects a negative amount and the residual envelope
+// (its amount is computed), and writes one allocation row in a single tx. Every
+// derived figure is recomputed on the next read (derived-not-stored).
+func (s *Service) EditAllocation(ctx context.Context, userID, envID int64, period string, planned int64) error {
+	if _, _, ok := parsePeriodYM(period); !ok {
+		v := &domain.ValidationError{}
+		v.Add("period", domain.MsgPeriodInvalid)
+		return v
+	}
+	if planned < 0 {
+		v := &domain.ValidationError{}
+		v.Add("planned_amount", domain.MsgAmountNegative)
+		return v
+	}
+	return s.tx.WithTx(ctx, func(q repo.DBTX) error {
+		if err := s.ensureEditable(ctx, q, userID, period); err != nil {
+			return err
+		}
+		env, err := s.envelopes.Get(ctx, q, userID, envID)
+		if err != nil {
+			return err // ErrNotFound ⇒ 404 (also the cross-tenant outcome)
+		}
+		if env.Mode == domain.ModeResidual {
+			v := &domain.ValidationError{}
+			v.Add("planned_amount", domain.MsgResidualNoAmount)
+			return v
+		}
+		now := s.now().UTC()
+		existing, err := s.allocations.ByEnvelopePeriod(ctx, q, userID, envID, period)
+		if err == nil {
+			existing.PlannedAmount = planned
+			existing.UpdatedAt = now
+			return s.allocations.Update(ctx, q, existing)
+		}
+		if !errors.Is(err, domain.ErrNotFound) {
+			return err
+		}
+		_, err = s.allocations.Create(ctx, q, &domain.Allocation{
+			UserID: userID, EnvelopeID: envID, Period: period,
+			PlannedAmount: planned, CreatedAt: now, UpdatedAt: now,
+		})
+		return err
+	})
+}
+
+// EndOfMonthTransfer materialises the residual savings sweep: a cleared transfer
+// dated today from the sweep account to its cascade-target vehicle of magnitude
+// to_save (the realised residual, rules §7/§9; functional/05 §5, lifecycle §4).
+// Refused on a locked month, when nothing is realised yet (to_save ≤ 0), or when
+// the cascade is full / has no target. Stored source-signed negative (I-031).
+func (s *Service) EndOfMonthTransfer(ctx context.Context, userID, sweepID int64, period string) error {
+	if _, _, ok := parsePeriodYM(period); !ok {
+		v := &domain.ValidationError{}
+		v.Add("period", domain.MsgPeriodInvalid)
+		return v
+	}
+	now := s.now().UTC()
+	today := s.today()
+	return s.tx.WithTx(ctx, func(q repo.DBTX) error {
+		if err := s.ensureEditable(ctx, q, userID, period); err != nil {
+			return err
+		}
+		acc, err := s.accounts.Get(ctx, q, userID, sweepID)
+		if err != nil {
+			return err
+		}
+		if acc.MonthEndPolicy != domain.PolicySweep {
+			return domain.ErrConflict
+		}
+		in, err := s.engineInputs(ctx, q, userID, period)
+		if err != nil {
+			return err
+		}
+		sv := in.Savings(sweepID)
+		if sv.ToSave <= 0 || sv.CascadeTargetID == nil {
+			return domain.ErrConflict // nothing to sweep, or the cascade is full
+		}
+		_, err = s.transactions.Create(ctx, q, &domain.Transaction{
+			UserID: userID, AccountID: sweepID, DestAccountID: sv.CascadeTargetID,
+			FlowType: domain.FlowTransfer, Amount: -sv.ToSave, OpDate: &today,
+			BudgetPeriod: period, Status: domain.StatusCleared, Source: domain.SourceManual,
+			CreatedAt: now, UpdatedAt: now,
+		})
+		return err
+	})
 }
 
 // scopeAccounts returns the current accounts a scope covers (aggregated = all
@@ -422,6 +517,11 @@ func (s *Service) figures(in engine.Inputs, scopeAccts []domain.Account, kind st
 		f.BalanceCleared += bal.ClearedBalance
 		f.BalanceReal += bal.RealBalance
 		f.InProgress += bal.InProgress
+		// A negative residual on an in-scope sweep account turns the Point bas
+		// figure red to stay coherent with the red savings encart (functional/05 §4a).
+		if a.MonthEndPolicy == domain.PolicySweep && in.Savings(a.ID).ResidualNegative {
+			f.ResidualNeg = true
+		}
 	}
 	switch kind {
 	case scopeKindCarry:
@@ -470,7 +570,7 @@ func (s *Service) encarts(in engine.Inputs, scopeAccts []domain.Account, kind st
 			continue
 		}
 		sv := in.Savings(a.ID)
-		e := ForecastEncart{AccountName: a.Name, Secured: sv.Secured, Projected: sv.Projected}
+		e := ForecastEncart{AccountName: a.Name, SweepID: a.ID, Secured: sv.Secured, Projected: sv.Projected, ToSave: sv.ToSave}
 		switch {
 		case sv.CascadeFull:
 			e.Kind = "cascade"

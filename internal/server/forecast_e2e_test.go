@@ -80,6 +80,80 @@ func TestForecastRendersCreatedMonth(t *testing.T) {
 	}
 }
 
+// allocEnvID extracts an editable row's envelope id from the per-account page by
+// finding the first /allocations/<id> input that follows the row's name.
+func allocEnvID(t *testing.T, raw, name string) string {
+	t.Helper()
+	ni := strings.Index(raw, ">"+name+"<")
+	if ni < 0 {
+		t.Fatalf("row %q not found on the page", name)
+	}
+	const marker = "/allocations/"
+	j := strings.Index(raw[ni:], marker)
+	if j < 0 {
+		t.Fatalf("no editable input after row %q", name)
+	}
+	start := ni + j + len(marker)
+	end := start
+	for end < len(raw) && raw[end] >= '0' && raw[end] <= '9' {
+		end++
+	}
+	return raw[start:end]
+}
+
+func TestForecastInlineEditRecompute(t *testing.T) {
+	ts, client := setupOwner(t)
+	base := ts.URL
+
+	fID := mkAccountID(t, base, client, "Fortuneo", "current", "sweep")
+	mkEnvHTTP(t, base, client, url.Values{
+		"name": {"Salaire"}, "flow_type": {"income"}, "account_id": {fID},
+		"mode": {"fixed_recurring"}, "default_amount": {"2600,00"}, "frequency": {"monthly"}, "expected_day": {"1"},
+	})
+	mkEnvHTTP(t, base, client, url.Values{
+		"name": {"Courses"}, "flow_type": {"expense"}, "account_id": {fID},
+		"mode": {"variable"}, "default_amount": {"600,00"},
+	})
+	tok := csrfToken(t, client, base, "/config/parameters")
+	resp := formReq(t, client, http.MethodPost, base+"/month-init?period=2026-06", url.Values{"_csrf": {tok}})
+	if resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("create month = %d", resp.StatusCode)
+	}
+	_ = bodyOf(t, resp)
+
+	// Read the per-account page (editable inputs) and find the Courses envelope id.
+	pageResp, _ := client.Get(base + "/?period=2026-06&scope=" + fID)
+	raw := bodyOf(t, pageResp)
+	if !strings.Contains(raw, `hx-patch="/allocations/`) {
+		t.Fatalf("active month should render inline Prévu inputs")
+	}
+	env := allocEnvID(t, raw, "Courses")
+
+	// Raise Courses past income → the recompute fragment shows the negative state.
+	tok = csrfToken(t, client, base, "/config/parameters")
+	resp = formReq(t, client, http.MethodPatch, base+"/allocations/"+env+"?period=2026-06&scope="+fID, url.Values{
+		"_csrf": {tok}, "planned": {"3000,00"},
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("allocation PATCH = %d, want 200", resp.StatusCode)
+	}
+	body := bodyOf(t, resp)
+	for _, want := range []string{`id="fc-total"`, `id="fc-figures"`, `id="fc-panel"`, "hx-swap-oob", "Solde insuffisant"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("PATCH response missing %q", want)
+		}
+	}
+
+	// The end-of-month transfer route is wired and guarded: with no realised
+	// residual (no cleared movements yet) it refuses with 409.
+	tok = csrfToken(t, client, base, "/config/parameters")
+	resp = formReq(t, client, http.MethodPost, base+"/transfers/end-of-month?period=2026-06&scope="+fID+"&account="+fID, url.Values{"_csrf": {tok}})
+	if resp.StatusCode != http.StatusConflict {
+		t.Errorf("end-of-month transfer with nothing to sweep = %d, want 409", resp.StatusCode)
+	}
+	_ = bodyOf(t, resp)
+}
+
 func TestForecastScopeCarryAndAggregated(t *testing.T) {
 	ts, client := setupOwner(t)
 	base := ts.URL

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -182,6 +183,106 @@ func TestForecast_RowsMatchEngineAndRollup(t *testing.T) {
 	}
 	if !sawOverrun {
 		t.Errorf("watch should surface the Divers overrun, got %+v", d.Watch)
+	}
+}
+
+func TestForecast_EditAllocationRecomputes(t *testing.T) {
+	s := newService(t)
+	fixedClock(s)
+	ctx := context.Background()
+	uid, sweep, _, courses, _ := forecastFixture(t, s)
+
+	// Baseline projected residual (planned income − planned expenses).
+	before, _ := s.Forecast(ctx, uid, "2026-06", idStr(sweep))
+	if before.Encarts[0].Projected != 76000 {
+		t.Fatalf("baseline projected = %d, want 76000", before.Encarts[0].Projected)
+	}
+
+	// Raise Courses 600 → 1000: the allocation upserts and the residual drops.
+	if err := s.EditAllocation(ctx, uid, courses, "2026-06", 100000); err != nil {
+		t.Fatalf("EditAllocation: %v", err)
+	}
+	a, err := s.allocations.ByEnvelopePeriod(ctx, s.tx.DB(), uid, courses, "2026-06")
+	if err != nil || a.PlannedAmount != 100000 {
+		t.Fatalf("allocation = %+v err=%v, want planned 100000", a, err)
+	}
+	after, _ := s.Forecast(ctx, uid, "2026-06", idStr(sweep))
+	if after.Encarts[0].Projected != 36000 {
+		t.Errorf("projected after edit = %d, want 36000", after.Encarts[0].Projected)
+	}
+	cr, _ := rowByName(after.Rows, "Courses")
+	if cr.Planned != 100000 {
+		t.Errorf("Courses planned row = %d, want 100000", cr.Planned)
+	}
+}
+
+func TestForecast_EditAllocationValidationAndLock(t *testing.T) {
+	s := newService(t)
+	fixedClock(s)
+	ctx := context.Background()
+	uid, sweep, _, courses, _ := forecastFixture(t, s)
+
+	// Negative amount → typed 422, no write.
+	var ve *domain.ValidationError
+	if err := s.EditAllocation(ctx, uid, courses, "2026-06", -1); !errors.As(err, &ve) {
+		t.Errorf("negative amount err = %v, want ValidationError", err)
+	}
+	// Residual envelope → 422 (its amount is computed).
+	res := mkEnv(t, s, uid, EnvelopeInput{Name: "Résidu", FlowType: "expense", AccountID: sweep, Mode: "residual"})
+	if err := s.EditAllocation(ctx, uid, res, "2026-06", 1000); !errors.As(err, &ve) {
+		t.Errorf("residual edit err = %v, want ValidationError", err)
+	}
+	// Locked month → ErrLocked (409).
+	if err := s.periods.UpdateState(ctx, s.tx.DB(), uid, "2026-06", domain.PeriodLocked, nil); err != nil {
+		t.Fatalf("lock: %v", err)
+	}
+	if err := s.EditAllocation(ctx, uid, courses, "2026-06", 50000); !errors.Is(err, domain.ErrLocked) {
+		t.Errorf("locked edit err = %v, want ErrLocked", err)
+	}
+}
+
+func TestForecast_EndOfMonthTransfer(t *testing.T) {
+	s := newService(t)
+	fixedClock(s)
+	ctx := context.Background()
+	uid, sweep, _, _, _ := forecastFixture(t, s)
+
+	// No cascade vehicle yet → nothing to sweep into.
+	if err := s.EndOfMonthTransfer(ctx, uid, sweep, "2026-06"); !errors.Is(err, domain.ErrConflict) {
+		t.Errorf("transfer with no cascade target err = %v, want ErrConflict", err)
+	}
+
+	// Add a passbook to the cascade, then sweep the realised residual (to_save).
+	livret := mkAccount(t, s, uid, "Livret A", "passbook", "none")
+	if err := s.ReorderCascade(ctx, uid, []int64{livret}); err != nil {
+		t.Fatalf("cascade: %v", err)
+	}
+	if err := s.EndOfMonthTransfer(ctx, uid, sweep, "2026-06"); err != nil {
+		t.Fatalf("EndOfMonthTransfer: %v", err)
+	}
+	txns, _ := s.transactions.ListByPeriod(ctx, s.tx.DB(), uid, "2026-06")
+	var found bool
+	for _, tx := range txns {
+		if tx.FlowType == domain.FlowTransfer && tx.AccountID == sweep && tx.DestAccountID != nil && *tx.DestAccountID == livret &&
+			tx.Amount == -111000 && tx.Status == domain.StatusCleared && tx.OpDate != nil {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a cleared sweep→livret transfer of -111000, got %+v", txns)
+	}
+	// After the sweep, to_save is realised away (≈ 0).
+	d, _ := s.Forecast(ctx, uid, "2026-06", idStr(sweep))
+	if d.Encarts[0].ToSave != 0 {
+		t.Errorf("to_save after sweep = %d, want 0", d.Encarts[0].ToSave)
+	}
+
+	// A locked month refuses the transfer.
+	if err := s.periods.UpdateState(ctx, s.tx.DB(), uid, "2026-06", domain.PeriodLocked, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.EndOfMonthTransfer(ctx, uid, sweep, "2026-06"); !errors.Is(err, domain.ErrLocked) {
+		t.Errorf("locked transfer err = %v, want ErrLocked", err)
 	}
 }
 

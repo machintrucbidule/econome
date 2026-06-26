@@ -53,6 +53,8 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 
 	// Budget — Prévisionnel (forecast) is the landing screen (functional/02 §6).
 	mux.Handle("GET /{$}", protected(http.HandlerFunc(h.ForecastGet)))
+	mux.Handle("PATCH /allocations/{env}", protected(http.HandlerFunc(h.AllocationPatch)))
+	mux.Handle("POST /transfers/end-of-month", protected(http.HandlerFunc(h.EndOfMonthTransfer)))
 
 	// Configuration — Paramètres (increment 4, PR-a).
 	mux.Handle("GET /config/parameters", protected(http.HandlerFunc(h.ParametersGet)))

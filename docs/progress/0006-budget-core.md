@@ -113,3 +113,92 @@ user's go-ahead** (`G15`).
 - The treasury timeline starts at `today` (the engine's low point is forward-looking from the injected
   clock, C3/C9), so for the current month the curve covers today→EOM rather than the full month; faithful to
   the engine, slightly less than the full-month mockup. Acceptable for read-only.
+
+---
+
+## 6b — Forecast inline edit + recompute + end-of-month transfer + locked guard — DONE
+
+**Date.** 2026-06-27 · **Status.** complete, all gates green; awaiting the user's go-ahead before 6c.
+
+Makes the forecast interactive while staying derived-not-stored: the inline `Prévu` edit with live
+server-side recompute, the "Virer en fin de mois" savings sweep, and the locked-month read-only guard.
+
+### What was built
+
+- **Inline `Prévu` edit.** `PATCH /allocations/{env}` (envelope-keyed upsert, **I-032**) →
+  `Service.EditAllocation`: `ensureEditable` (locked guard) + `planned ≥ 0` (typed 422) + residual-envelope
+  rejection, then upsert via `allocations.ByEnvelopePeriod`→`Update`/`Create` in one tx. Each leaf/child
+  expense **and income** row renders an editable `.amt-inp` on an **active** month (read-only text on a
+  locked month / parent rollup / aggregated flat row; the residual envelope is never a row).
+- **Recalc + OOB fragments** (`functional/04` §6, `technical/04` §3.2). The handler decomposed the screen
+  into id-stable reusable fragments (`fc-row` leaf/child/parent/flat, `fc-total`, `fc-figures`, `fc-panel`,
+  `fc-timeline`) used by both the full page and the PATCH response. PATCH returns the **edited row**
+  (primary swap into `#fc-row-e{id}`) + **OOB**: the **parent rollup row** when a child is edited, the
+  **footer total**, the **savings panel** (encart + à surveiller), and the **figures** — the figures
+  re-render because a `Prévu` edit that drives the residual negative turns the **Point bas card red** to stay
+  coherent with the red encart (`functional/05` §4a, new in 6b). The **timeline is correctly not re-sent**
+  for an allocation edit (planned doesn't change transactions).
+- **End-of-month transfer.** `POST /transfers/end-of-month?account=&period=` → `Service.EndOfMonthTransfer`:
+  `ensureEditable`, then a **cleared** transfer dated today from the sweep account to its **cascade target**
+  of magnitude `to_save` (realised residual), stored source-signed **negative** (I-031). Refused (409) when
+  `to_save ≤ 0`, the cascade is full / has no target, or the month is locked. Returns the savings panel +
+  OOB figures + timeline (the cleared transfer shifts balances + low point). The "Virer" button is live only
+  on an active month with `to_save > 0` (else `disabled`); 6a's negative/cascade bands keep their disabled
+  button.
+- **Locked-month guard.** Every mutation funnels through the existing `ensureEditable` choke point
+  (`services/accounts.go:25`) → `ErrLocked` → 409; the central `mutationError` maps it and `app.js`
+  `allowErrorSwap` already swaps 409. Inputs/buttons render `disabled` when the month is locked.
+
+### Specs satisfied
+
+`functional/05` §5 (inline edit, end-of-month transfer) + §4a (residual-negative → red Point bas),
+`functional/04` §3.4 (allocation edit), §6 (recalc matrix), §4 (lock guard, the end-of-month transfer of
+`to_save`), `rules` §7/§9 (residual/to_save/cascade), §10 (transfer sign), `technical/04` §1/§3.2 (the OOB
+hypermedia model). Decisions **I-031** (reused), **I-032**. No schema change.
+
+### Tests passing
+
+- **Service integration** (`forecast_test.go`, pinned clock): `EditAllocation` upserts + the projected
+  residual recomputes (76000 → 36000) and the row reflects it; `planned < 0` → 422; residual envelope → 422;
+  **locked period → ErrLocked**; `EndOfMonthTransfer` with no cascade target → 409; with a cascade passbook →
+  a cleared sweep→livret transfer of **−111000**, and `to_save` realises to **0** afterwards; locked → 409.
+- **e2e backbone** (`forecast_e2e_test.go`): inline `Prévu` PATCH returns the edited row + OOB
+  `#fc-total`/`#fc-figures`/`#fc-panel` with `hx-swap-oob`, and raising an expense past income flips the
+  encart to **"Solde insuffisant"**; the end-of-month route is wired + guarded (409 with nothing to sweep).
+- **chromedp smoke** (`-tags chromedp`): inline `Prévu` edit fires the htmx PATCH and the savings panel
+  swaps live to the negative state without reload.
+- Full suite + `gofumpt -l` + `go vet` (incl. `-tags chromedp`) + `golangci-lint` + `govulncheck` clean;
+  engine-coverage gate **91.7 %** holds (engine untouched).
+
+### Verification (G8)
+
+Conformance checklist: derived-not-stored (only the allocation/transfer rows are written; every figure is
+recomputed on read); tenant scoping via `user_id` repos; integer minor units + banker's rounding, no float
+on money; exhaustive enum `switch`; **recalc matrix honoured** (edited row + parent + total + panel + figures
+on an allocation edit; panel + figures + timeline on the transfer; timeline correctly omitted on an
+allocation edit); **locked-month guard on every mutation** (409, inside the tx, before any write); DSP2 seam
+intact (the transfer is `source=manual`, the reconciliation path untouched; the allocation upsert adds no
+transaction). Optional targeted review of the mutations + locked guard run.
+
+### Exact next step
+
+**6c — Journal** (`functional/06`): creation-only quick-entry (`POST /transactions`, status default
+`cleared`, account-from-category server-side), whole-cell inline edit (`PATCH /transactions/:id`), sortable
+columns / default date-desc, the right-panel month summary + filters, transfer rows (one two-legged row,
+inline-edit scope M23, atomic delete L8). Specs `functional/06`, `functional/04` §3.5/§6, `technical/04`
+§3.3. The forecast drill-down "Ouvrir dans le journal" + the Journal tab already link to `/journal`.
+**Awaiting the user's go-ahead** (`G15`).
+
+### Open points
+
+- **Inline edit scope.** The inline `Prévu` edit is enabled in **per-account** scope (sweep/carry) for
+  leaf/child rows; the **aggregated** flat rows stay read-only (the overview, not the edit surface). Income
+  rows are editable too (their planned feeds the residual). No spec conflict; revisit if the user wants
+  aggregated-scope editing.
+- **End-of-month transfer idempotency.** Clicking "Virer" twice would create a second transfer, but after the
+  first the realised `to_save` drops to ~0 so the button disables — a double-click transfers ~0. No explicit
+  idempotency key; acceptable for the manual flow. The full close flow (increment 8) supersedes this as the
+  primary path (O-18).
+- The `POST /transfers/end-of-month` happy path is **service-tested** (needs cleared movements); the e2e only
+  asserts the route + guard, because cleared transactions require the Journal (6c). The chromedp/e2e happy
+  path lands once the Journal can realise movements.
