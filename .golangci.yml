@@ -30,10 +30,11 @@ linters:
       check:
         - switch
 
-    misspell:
-      # No US/GB locale pin: the specs and code use British spelling
-      # ("behaviour", "localisation", "defence"); misspell's default still
-      # catches genuine typos without fighting the dialect.
+    # misspell: no settings block — no US/GB locale pin (the specs and code use
+    # British spelling: "behaviour", "localisation", "defence"); misspell's
+    # default still catches genuine typos without fighting the dialect. An empty
+    # `misspell:` key fails `golangci-lint config verify` (null != object), so it
+    # is omitted entirely.
 
     depguard:
       rules:
