@@ -51,8 +51,13 @@ func (in Inputs) envelopeSums(e domain.Envelope, flow domain.FlowType) (realAmt,
 		case domain.StatusCleared:
 			realAmt += amt
 		case domain.StatusPending:
-			realAmt += amt
 			inProgress += amt
+			// Expense actuals include pending (real = cleared + pending, C7);
+			// income "received" is cleared positive amounts only (§4), so a
+			// pending income is surfaced as in-progress, not yet received.
+			if flow != domain.FlowIncome {
+				realAmt += amt
+			}
 		case domain.StatusAwaited:
 			awaited += amt
 		}

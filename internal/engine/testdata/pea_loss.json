@@ -1,0 +1,13 @@
+{
+  "Supports": [
+    {
+      "AccountID": 4,
+      "Type": "securities",
+      "Value": 900000,
+      "Delta": 900000
+    }
+  ],
+  "LivretsSubtotal": 0,
+  "Total": 900000,
+  "TotalDelta": 900000
+}

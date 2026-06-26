@@ -113,6 +113,29 @@ func TestIncomeEnvelopeNoFiveState(t *testing.T) {
 	}
 }
 
+// Income "received" is cleared-only (§4): a pending income is surfaced as
+// in-progress, not counted as received — unlike an expense (C7).
+func TestIncomeReceivedExcludesPending(t *testing.T) {
+	c := catIncome
+	mk := func(status domain.TransactionStatus) Inputs {
+		return Inputs{
+			Period:      "2026-06",
+			Accounts:    []domain.Account{{ID: accCurrent, Type: domain.AccountCurrent}},
+			Categories:  []domain.Category{{ID: catIncome, FlowType: domain.FlowIncome}},
+			Envelopes:   []domain.Envelope{{ID: 200, CategoryID: catIncome, AccountID: accCurrent, Mode: domain.ModeVariable}},
+			Allocations: []domain.Allocation{{EnvelopeID: 200, Period: "2026-06", PlannedAmount: 200000}},
+			Txns:        []domain.Transaction{{AccountID: accCurrent, CategoryID: &c, FlowType: domain.FlowIncome, Amount: 200000, BudgetPeriod: "2026-06", Status: status}},
+		}
+	}
+	pending := mk(domain.StatusPending).EnvelopeView(200)
+	if pending.Real != 0 {
+		t.Errorf("pending income received = %d, want 0 (cleared-only, §4)", pending.Real)
+	}
+	if pending.InProgress != 200000 {
+		t.Errorf("pending income in_progress = %d, want 200000", pending.InProgress)
+	}
+}
+
 // Property: real = cleared + pending; inProgress = pending; awaited separate.
 func TestProp_PendingInReal(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {

@@ -25,6 +25,7 @@ secret.key
 /specifications/
 
 # Test / coverage / profiling output
+**/testdata/rapid/
 coverage.out
 coverage.html
 coverage.*
