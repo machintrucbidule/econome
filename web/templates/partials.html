@@ -23,6 +23,14 @@
 <script src="/assets/app.js"></script>
 {{end}}
 
+{{/* In-app screens that need htmx + the validated design system + the CSP-clean
+     app delegation, but not SortableJS (forecast/journal). */}}
+{{define "appscripts"}}
+<script src="/assets/htmx.min.js"></script>
+<script src="/assets/econome.js"></script>
+<script src="/assets/app.js"></script>
+{{end}}
+
 {{/* Shared left rail for the in-app screens. Expects .T .Email .CSRF .Nav */}}
 {{define "rail"}}
 <aside class="rail">

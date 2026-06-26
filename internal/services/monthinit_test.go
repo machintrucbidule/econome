@@ -180,6 +180,11 @@ func TestMonthInit_TransferGeneratesAwaitedWithDest(t *testing.T) {
 	if tx.FlowType != domain.FlowTransfer || tx.AccountID != f || tx.DestAccountID == nil || *tx.DestAccountID != b || tx.CategoryID != nil {
 		t.Errorf("transfer txn wrong: flow=%s acc=%d dest=%v cat=%v", tx.FlowType, tx.AccountID, tx.DestAccountID, tx.CategoryID)
 	}
+	// A funding transfer leaves the source account, so its stored amount is
+	// negative (engine applies source −X / dest +X — I-031).
+	if tx.Amount != -24000 {
+		t.Errorf("transfer amount = %d, want -24000 (money leaves the source)", tx.Amount)
+	}
 	// A transfer is excluded from the budget → no allocation generated.
 	if allocs, _ := s.allocations.ListByPeriod(ctx, s.tx.DB(), uid, period); len(allocs) != 0 {
 		t.Errorf("transfer must not create an allocation, got %d", len(allocs))

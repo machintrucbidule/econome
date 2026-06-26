@@ -90,6 +90,21 @@
       html.setAttribute("data-theme", html.getAttribute("data-theme") === "dark" ? "light" : "dark");
     } else if (action === "nav-left") {
       if (window.toggleLeft) window.toggleLeft();
+    } else if (action === "nav-right") {
+      if (window.toggleRight) window.toggleRight();
+    } else if (action === "toggle-picker") {
+      var mp = $("#mp"); if (mp) mp.classList.toggle("open");
+    } else if (action === "goto") {
+      var href = el.getAttribute("data-href"); if (href) window.location.assign(href);
+    } else if (action === "toggle-row") {
+      /* forecast row expand: parent → its children, leaf → its drill-down */
+      var key = el.getAttribute("data-k");
+      var open = el.classList.toggle("open");
+      var chev = el.querySelector(".chev");
+      if (chev) chev.classList.toggle("open", open);
+      $$('tr[data-c="' + key + '"], tr[data-d="' + key + '"]').forEach(function (tr) {
+        tr.classList.toggle("hidden", !open);
+      });
     } else if (action === "modal-close") {
       var host = $("#modal-host"); if (host) host.innerHTML = "";
     } else if (action === "cascade-remove") {

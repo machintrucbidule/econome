@@ -100,10 +100,3 @@ type AuthView struct {
 
 // FieldError returns the localised error for a field, or "".
 func (v AuthView) FieldError(field string) string { return v.FieldErrors[field] }
-
-// ShellView backs the empty three-pane shell (the landing page).
-type ShellView struct {
-	Base
-	Email            string
-	DemoBalanceMinor int64
-}
