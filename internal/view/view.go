@@ -68,6 +68,14 @@ func (b Base) T(key string, args ...string) string { return b.catalog.T(b.Lang, 
 // Money formats an amount in minor units for the active locale + currency.
 func (b Base) Money(minor int64) string { return i18n.FormatMoney(minor, b.Lang, b.Currency) }
 
+// Amount formats minor units as a localised number without a currency symbol —
+// for editable form inputs (the inverse of i18n.ParseMoney).
+func (b Base) Amount(minor int64) string { return i18n.FormatAmount(minor, b.Lang) }
+
+// Rate formats basis points as a localised percentage number without the percent
+// sign — for the rate input fields (the inverse of i18n.ParsePercent).
+func (b Base) Rate(bp int) string { return i18n.FormatRate(bp, b.Lang) }
+
 // CSRF returns the per-request CSRF token (for the hidden form field / hx-headers).
 func (b Base) CSRF() string { return b.CSRFToken }
 

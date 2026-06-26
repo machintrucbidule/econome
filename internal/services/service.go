@@ -50,30 +50,63 @@ func (e *LockedError) RetrySeconds() int {
 	return s
 }
 
-// Service owns the auth use-cases: it loads inputs via the repositories, applies
-// validation and the lockout policy, writes inside transactions, and returns
-// results. It holds no HTTP knowledge.
+// Service owns the application use-cases: it loads inputs via the repositories,
+// applies validation, the lockout policy, and the locked-month guard, writes
+// inside transactions, and returns results. It holds no HTTP knowledge.
 type Service struct {
-	users    repo.UserRepo
-	sessions repo.SessionRepo
-	settings repo.SettingsRepo
-	tx       repo.Txer
-	secret   []byte
-	throttle *auth.Throttle
-	now      func() time.Time
+	users        repo.UserRepo
+	sessions     repo.SessionRepo
+	settings     repo.SettingsRepo
+	accounts     repo.AccountRepo
+	categories   repo.CategoryRepo
+	envelopes    repo.EnvelopeRepo
+	allocations  repo.AllocationRepo
+	transactions repo.TransactionRepo
+	snapshots    repo.SnapshotRepo
+	periods      repo.PeriodRepo
+	tx           repo.Txer
+	secret       []byte
+	throttle     *auth.Throttle
+	now          func() time.Time
 }
 
-// New builds a Service from the repositories + transaction seam and the session
-// secret. Tests inject fakes for the same interfaces.
-func New(users repo.UserRepo, sessions repo.SessionRepo, settings repo.SettingsRepo, tx repo.Txer, secret []byte) *Service {
+// Deps bundles the repositories + transaction seam + session secret the service
+// needs. Both *repo.Store (SQLite) and *repotest.Store (fakes) supply these
+// interface-typed fields, so a named struct keeps the wiring readable as the
+// service grows across increments rather than a long positional argument list.
+type Deps struct {
+	Users        repo.UserRepo
+	Sessions     repo.SessionRepo
+	Settings     repo.SettingsRepo
+	Accounts     repo.AccountRepo
+	Categories   repo.CategoryRepo
+	Envelopes    repo.EnvelopeRepo
+	Allocations  repo.AllocationRepo
+	Transactions repo.TransactionRepo
+	Snapshots    repo.SnapshotRepo
+	Periods      repo.PeriodRepo
+	Tx           repo.Txer
+	Secret       []byte
+}
+
+// New builds a Service from its dependencies. Tests inject fakes for the same
+// interfaces.
+func New(d Deps) *Service {
 	return &Service{
-		users:    users,
-		sessions: sessions,
-		settings: settings,
-		tx:       tx,
-		secret:   secret,
-		throttle: auth.NewThrottle(20, time.Minute),
-		now:      time.Now,
+		users:        d.Users,
+		sessions:     d.Sessions,
+		settings:     d.Settings,
+		accounts:     d.Accounts,
+		categories:   d.Categories,
+		envelopes:    d.Envelopes,
+		allocations:  d.Allocations,
+		transactions: d.Transactions,
+		snapshots:    d.Snapshots,
+		periods:      d.Periods,
+		tx:           d.Tx,
+		secret:       d.Secret,
+		throttle:     auth.NewThrottle(20, time.Minute),
+		now:          time.Now,
 	}
 }
 

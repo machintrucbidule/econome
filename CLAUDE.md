@@ -105,22 +105,29 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 3 (data model + repositories) — DONE** (PRs #15–#17 merged; CI green). The full budget schema
-(migrations 0002–0006: account/category/envelope/allocation/transaction, period/period_event,
-savings_snapshot/networth_month, label_mapping/ui_preference, invitation/totp_backup_code, `technical/03`
-§3–§5) and the `user_id`-scoped repositories + in-memory fakes for all 13 tables are in place; migration
-(forward-from-empty + production-shaped) + integration + parity tests green. Decisions I-001..I-020. See
-`docs/progress/0003-data-model.md`. **Next: increment 4 = configuration screens (Parameters + Envelopes)**
-(`development-plan/01-phased-plan.md`) — awaiting the user's go-ahead.
-(Increments 0–2 also done: scaffold; the walking skeleton — owner setup → login → shell → logout,
-sessions/lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; and the sealed pure engine +
-reconciliation at 91.7 % coverage.)
+**Increment 4 (configuration screens) — IN PROGRESS: PR-a (Paramètres) done, PR-b (Enveloppes) next.**
+PR-a delivered the **Paramètres** screen (`/config/parameters`): account CRUD (sweep/carry, L3 forward-only
+via the `ensureEditable` locked-month guard, L4/L10 archive-vs-delete), settings (Épargne/Localisation/
+Préférences), the SortableJS savings cascade, all with service validation (typed 422, no partial write), the
+no-float money/rate parsing boundary (`i18n.ParseMoney/ParsePercent`), and the central error→fragment mapper
+(`G3`). The `Service` now takes a `Deps` struct. Configuration forms are **CSP-clean** (native controls +
+htmx + `web/assets/app.js` delegation; the mockup's inline-handler custom selects are deferred, I-024).
+Decisions **I-021..I-024**. See `docs/progress/0004-configuration.md`. **Next: PR-b — Enveloppes**
+(combined category+envelope form I-021, `functional/08`) — awaiting the user's go-ahead.
+(Increments 0–3 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
+lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; the sealed pure engine + reconciliation
+at 91.7 %; and the full budget schema + `user_id`-scoped repos + fakes for all 13 tables.)
 
 > Reminders: `main` is protected — all changes via PR → CI green → merge; required checks now include
 > `e2e chrome smoke` (O-7 resolved). Dependabot minor/patch auto-merge on green, majors manual (I-008).
 > Local-dev: add `C:\Program Files\Go\bin` + `%USERPROFILE%\go\bin` to PATH; `go test -race` needs cgo (runs
 > in CI on Linux) so locally use `go test ./...`; `chromedp` smoke needs `-tags chromedp` + local Chrome.
 > Engine golden fixtures regenerate with `go test -run Golden -update ./internal/engine`.
+> **Vendored JS is not scanned by `govulncheck`** (Go-only): `web/assets/sortable.min.js` (SortableJS,
+> pinned 1.15.6, I-022) and `htmx.min.js` (I-009) must be bumped manually / via Dependabot, not relied on
+> for vuln alerts. **CSP** (`technical/05` §10) forbids inline JS — all in-app screens are built CSP-clean
+> (native controls + htmx attributes + `web/assets/app.js` delegation off `data-action`); never add inline
+> `onclick`/`<script>` to a template (I-024).
 
 > **Repo note (I-006).** The published GitHub repo is **public** but `specifications/` is **gitignored**
 > (local-only) — the design dossier + decision logs are not pushed. They remain on this working tree, so

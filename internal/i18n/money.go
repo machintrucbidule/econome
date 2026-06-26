@@ -80,6 +80,42 @@ func FormatMoney(minor int64, lang domain.Language, currency string) string {
 	return b.String()
 }
 
+// FormatAmount renders minor units as a localised number WITHOUT a currency
+// symbol — for editable form inputs (the parsing inverse of ParseMoney). It is
+// exact: no float. Example: 900000 -> "9 000,00" (FR), "9,000.00" (EN).
+func FormatAmount(minor int64, lang domain.Language) string {
+	f := formatFor(lang)
+	negative := minor < 0
+	abs := minor
+	if negative {
+		abs = -abs
+	}
+	body := groupDigits(strconv.FormatInt(abs/100, 10), f.group) + f.decimal + twoDigits(abs%100)
+	if negative {
+		return f.minus + body
+	}
+	return body
+}
+
+// FormatRate renders basis points as a localised percentage number without the
+// percent sign, trimming a redundant trailing zero — for the rate input fields
+// (the inverse of ParsePercent). Example: 1720 -> "17,2", 9000 -> "90",
+// 1725 -> "17,25" (FR).
+func FormatRate(bp int, lang domain.Language) string {
+	f := formatFor(lang)
+	whole := bp / 100
+	frac := bp % 100
+	s := strconv.Itoa(whole)
+	switch {
+	case frac == 0:
+		return s
+	case frac%10 == 0:
+		return s + f.decimal + strconv.Itoa(frac/10)
+	default:
+		return s + f.decimal + twoDigits(int64(frac))
+	}
+}
+
 // groupDigits inserts sep every three digits from the right.
 func groupDigits(digits, sep string) string {
 	n := len(digits)

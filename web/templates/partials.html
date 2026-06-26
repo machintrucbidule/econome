@@ -8,3 +8,42 @@
 <script src="/assets/htmx.min.js"></script>
 <script src="/assets/econome.js"></script>
 {{end}}
+
+{{define "confhead"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/assets/econome.css">
+<link rel="stylesheet" href="/assets/config.css">
+{{end}}
+
+{{define "confscripts"}}
+<script src="/assets/htmx.min.js"></script>
+<script src="/assets/sortable.min.js"></script>
+<script src="/assets/econome.js"></script>
+<script src="/assets/app.js"></script>
+{{end}}
+
+{{/* Shared left rail for the in-app screens. Expects .T .Email .CSRF .Nav */}}
+{{define "rail"}}
+<aside class="rail">
+  <a class="logo" href="/" style="text-decoration:none"><span class="lg-full">Econo<b>Me</b></span><span class="lg-mini">E<b>m</b></span></a>
+  <nav class="nav">
+    <a {{if eq .Nav "budget"}}class="on"{{end}} href="/"><span class="i">▤</span><span class="label">{{.T "nav.budget"}}</span></a>
+    <a {{if eq .Nav "patrimoine"}}class="on"{{end}} href="/"><span class="i">◴</span><span class="label">{{.T "nav.patrimoine"}}</span></a>
+    <a {{if eq .Nav "configuration"}}class="on"{{end}} href="/config/parameters"><span class="i">⚙</span><span class="label">{{.T "nav.configuration"}}</span></a>
+  </nav>
+  <div>
+    <div class="raillab">{{.T "shell.scope"}}</div>
+    <div class="acct all" data-scope="aggregated"><span class="dot"></span><span class="nm">{{.T "shell.scope.all"}}</span></div>
+  </div>
+  <div class="railsp"></div>
+  <div class="me">
+    <button class="iconbtn" type="button" data-action="theme-toggle" title="{{.T "shell.theme"}}">◐</button>
+    <span>{{.Email}}</span>
+    <form method="post" action="/logout" style="display:inline">
+      <input type="hidden" name="_csrf" value="{{.CSRF}}">
+      <button class="btn" type="submit">{{.T "shell.logout"}}</button>
+    </form>
+  </div>
+</aside>
+{{end}}

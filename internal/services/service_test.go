@@ -24,7 +24,25 @@ func newService(t *testing.T) *Service {
 		t.Fatalf("migrate: %v", err)
 	}
 	store := repo.New(db)
-	return New(store.Users, store.Sessions, store.Settings, store, []byte("test-secret-0123456789abcdef0123"))
+	return New(depsFromStore(store, []byte("test-secret-0123456789abcdef0123")))
+}
+
+// depsFromStore wires every repository of a *repo.Store into services.Deps.
+func depsFromStore(store *repo.Store, secret []byte) Deps {
+	return Deps{
+		Users:        store.Users,
+		Sessions:     store.Sessions,
+		Settings:     store.Settings,
+		Accounts:     store.Accounts,
+		Categories:   store.Categories,
+		Envelopes:    store.Envelopes,
+		Allocations:  store.Allocations,
+		Transactions: store.Transactions,
+		Snapshots:    store.Snapshots,
+		Periods:      store.Periods,
+		Tx:           store,
+		Secret:       secret,
+	}
 }
 
 const goodPassword = "Tr0ub4dour&3xtra"
