@@ -290,3 +290,28 @@ td.e:hover .catpill,td.e:focus-visible .catpill,td.e:hover .chip-period,td.e:foc
 .fchip:hover{border-color:var(--brand);color:var(--brand)}
 .fchip.on{background:var(--brand-soft);color:var(--brand);border-color:var(--brand)}
 .fchip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* auth pages (setup / login) — ported from mockups/login.html page styles.
+   body is already flex-column 100vh (above), so .authstage{flex:1} centres the
+   card; overflow:auto lets the tall first-run card scroll on short viewports. */
+.authstage{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
+.authwrap{width:min(440px,100%)}
+.brand{font-weight:800;font-size:27px;color:var(--brand);text-align:center;margin-bottom:4px;letter-spacing:-.5px}
+.brand b{color:var(--accent)}
+.tagline{text-align:center;color:var(--muted);font-size:13px;margin-bottom:22px}
+.auth-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:26px}
+.auth-card h1{font-size:19px;font-weight:800;margin:0 0 4px}
+.auth-card .sub,.auth-card .muted{color:var(--muted);font-size:13px;margin:0 0 18px;line-height:1.45}
+.fld{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.fld label{font-size:12px;font-weight:700;color:var(--muted)}
+.fld .inp,.fld .sel-btn,.fld select.inp{height:42px;width:100%}
+.fld .sel-btn{justify-content:space-between}
+.ferr{color:var(--bad);font-size:12px;font-weight:600;margin-top:2px}
+.check{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);cursor:pointer;margin:4px 0 16px}
+.check input{width:16px;height:16px;accent-color:var(--brand)}
+.btn-block{width:100%;justify-content:center;height:44px;font-size:15px}
+.pwrules{list-style:none;margin:4px 0 14px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px}
+.pwrules li{font-size:12px;color:var(--faint);display:flex;align-items:center;gap:6px}
+.pwrules li::before{content:"\25CB";font-weight:700}
+.errbox{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600;margin-bottom:14px}
+.warnbox{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600;margin-bottom:14px}
