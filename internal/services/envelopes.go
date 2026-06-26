@@ -48,6 +48,7 @@ type EnvelopeInput struct {
 	FlowType        string
 	DefaultExpanded bool // seeds the parent node's forecast expansion (M4)
 	AccountID       int64
+	DestAccountID   *int64 // transfer envelopes only — the internal-transfer destination (T11)
 	Mode            string
 	DefaultAmount   *int64
 	Frequency       string
@@ -172,9 +173,13 @@ func (s *Service) CreateEnvelope(ctx context.Context, userID int64, in EnvelopeI
 		if err != nil {
 			return err
 		}
+		dest, err := s.resolveDest(ctx, q, userID, in)
+		if err != nil {
+			return err
+		}
 		now := s.now().UTC()
 		e := &domain.Envelope{
-			UserID: userID, CategoryID: catID, AccountID: in.AccountID,
+			UserID: userID, CategoryID: catID, AccountID: in.AccountID, DestAccountID: dest,
 			Mode: domain.Mode(in.Mode), DefaultAmount: amountForMode(in),
 			Status: domain.ArchiveActive, CreatedAt: now, UpdatedAt: now,
 		}
@@ -221,7 +226,12 @@ func (s *Service) UpdateEnvelope(ctx context.Context, userID, id int64, in Envel
 		if err := s.categories.Update(ctx, q, leaf); err != nil {
 			return err
 		}
+		dest, err := s.resolveDest(ctx, q, userID, in)
+		if err != nil {
+			return err
+		}
 		cur.AccountID = in.AccountID
+		cur.DestAccountID = dest
 		cur.Mode = domain.Mode(in.Mode)
 		cur.DefaultAmount = amountForMode(in)
 		applyRecurrence(cur, in)
@@ -292,6 +302,40 @@ func flowConflict() error {
 	v := &domain.ValidationError{}
 	v.Add("flow_type", domain.MsgFlowTypeConflict)
 	return v
+}
+
+// resolveDest validates and returns the internal-transfer destination for the
+// envelope (T11). Only transfer envelopes carry one: it must be an existing,
+// same-tenant current account distinct from the source account; non-transfer
+// envelopes carry no destination (NULL). The basic required/not-allowed shape is
+// also caught in validateEnvelope; this adds the repo-backed account checks.
+func (s *Service) resolveDest(ctx context.Context, q repo.DBTX, userID int64, in EnvelopeInput) (*int64, error) {
+	if domain.FlowType(in.FlowType) != domain.FlowTransfer {
+		return nil, nil
+	}
+	v := &domain.ValidationError{}
+	if in.DestAccountID == nil {
+		v.Add("dest_account_id", domain.MsgDestRequired)
+		return nil, v
+	}
+	if *in.DestAccountID == in.AccountID {
+		v.Add("dest_account_id", domain.MsgDestSameAccount)
+		return nil, v
+	}
+	da, err := s.accounts.Get(ctx, q, userID, *in.DestAccountID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			v.Add("dest_account_id", domain.MsgDestInvalid)
+			return nil, v
+		}
+		return nil, err
+	}
+	if da.Type != domain.AccountCurrent {
+		v.Add("dest_account_id", domain.MsgDestNotCurrent)
+		return nil, v
+	}
+	id := da.ID
+	return &id, nil
 }
 
 // resolveLeafCategory find-or-creates the leaf category by (name, parent, flow):
@@ -384,6 +428,13 @@ func validateEnvelope(in EnvelopeInput) error {
 	}
 	if in.AccountID == 0 {
 		v.Add("account_id", domain.MsgAccountRequired)
+	}
+	if domain.FlowType(in.FlowType) == domain.FlowTransfer {
+		if in.DestAccountID == nil {
+			v.Add("dest_account_id", domain.MsgDestRequired)
+		}
+	} else if in.DestAccountID != nil {
+		v.Add("dest_account_id", domain.MsgDestNotAllowed)
 	}
 	switch mode {
 	case domain.ModeFixedRecurring:

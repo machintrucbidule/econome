@@ -106,6 +106,10 @@
           <select class="inp" id="e-flow" name="flow_type">{{range .FlowOptions}}<option value="{{.Value}}" {{if eq .Value $.FlowType}}selected{{end}}>{{.Label}}</option>{{end}}</select>
           {{if .FieldError "flow_type"}}<span class="err">{{.FieldError "flow_type"}}</span>{{end}}
         </div>
+        <div class="fwrap{{if not .IsTransfer}} off{{end}}" id="w-dest"><label>{{.T "env.f.dest"}}</label>
+          <select class="inp" id="e-dest" name="dest_account_id"><option value="0">{{.T "env.f.dest_none"}}</option>{{range .DestOptions}}<option value="{{.Value}}" {{if eq .Value (printf "%d" $.DestAccountID)}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+          {{if .FieldError "dest_account_id"}}<span class="err">{{.FieldError "dest_account_id"}}</span>{{end}}<span class="sub">{{.T "env.f.dest_sub"}}</span>
+        </div>
         <div class="fwrap"><label>{{.T "env.f.mode"}}</label>
           <select class="inp" id="e-mode" name="mode">{{range .ModeOptions}}<option value="{{.Value}}" {{if eq .Value $.Mode}}selected{{end}}>{{.Label}}</option>{{end}}</select>
           {{if .FieldError "mode"}}<span class="err">{{.FieldError "mode"}}</span>{{end}}

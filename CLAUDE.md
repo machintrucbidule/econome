@@ -105,21 +105,25 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 4 (configuration screens) — DONE** (PR-a #19 + PR-b #20 merged; CI green). Both **Paramètres**
-(`/config/parameters`) and **Enveloppes** (`/config/envelopes`) are live: account CRUD (sweep/carry, L3
-forward-only via the `ensureEditable` locked-month guard, L4/L10 archive-vs-delete), settings (Épargne/
-Localisation/Préférences), the SortableJS savings cascade, and the combined category+envelope CRUD (I-021:
-one form writes a leaf category — find-or-create, shared across accounts — + its envelope in one tx, inline
-new-parent, hierarchy with read-only parent sums, mode/flow badges, residual non-deletable). All with
-service validation (typed 422, no partial write), the no-float money/rate boundary
-(`i18n.ParseMoney/ParsePercent`), and the central error→fragment mapper (`G3`). The `Service` takes a `Deps`
-struct. In-app screens are **CSP-clean** (native controls + htmx + `web/assets/app.js` delegation off
-`data-action`; never add inline `onclick`/`<script>`, I-024). Decisions **I-021..I-024**. See
-`docs/progress/0004-configuration.md`. **Next: increment 5 = month-initialisation assistant**
-(`functional/09`, `development-plan/01-phased-plan.md`) — awaiting the user's go-ahead; demo **D2** follows.
-(Increments 0–3 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
+**Increment 5 (month-initialisation assistant) — DONE** (CI gates green locally; PR pending). The first
+feature to **consume the pure engine through a screen**: `/month-init?period=&scope=` computes the editable,
+**non-persisted** draft (start cards, posts table, residual encart) recomputed **server-side by the engine**
+on each leaf edit (no client computation, I-025); "Créer le mois" (`POST /month-init`) materialises
+**allocations + awaited transactions + the `period` row** (`state=active`) + a `create` `period_event` in
+**one transaction** (refuses an already-created period, I-027) then redirects. Materialisation: fixed
+expense/income → allocation + awaited txn; variable → allocation only; fixed transfer → awaited transfer only
+(dest set, no allocation); residual → nothing. `engineInputs`/`startBalances` (I-018/I-026) is the reusable
+engine-assembly seam (inc 6/7 reuse it). **T11**: `envelope.dest_account_id` added (migration `0007`,
+additive) so a transfer envelope stores its destination — the Enveloppes config gained a dest picker (current
+account ≠ source, service-validated). M26 rail scope filters the draft. `Service` now wires `PeriodEvents`.
+Decisions **T11**, **I-025..I-028**. See `docs/progress/0005-month-init.md`. **Next: increment 6 = Forecast +
+Journal + reconciliation orchestration** (`functional/05`/`06`, `development-plan/01-phased-plan.md`) —
+awaiting the user's go-ahead; demo **D3** follows. Open points **O-16** (no opening-balance column), **O-17**
+(snapshots-at-init for cascade-full), **O-18** (sweep start≈0 depends on the close increment's sweep txn).
+(Increments 0–4 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
 lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; the sealed pure engine + reconciliation
-at 91.7 %; and the full budget schema + `user_id`-scoped repos + fakes for all 13 tables.)
+at 91.7 %; the full budget schema + `user_id`-scoped repos + fakes; and both configuration screens
+(Paramètres + Enveloppes, combined category+envelope CRUD I-021, SortableJS cascade, I-021..I-024).)
 
 > Reminders: `main` is protected — all changes via PR → CI green → merge; required checks now include
 > `e2e chrome smoke` (O-7 resolved). Dependabot minor/patch auto-merge on green, majors manual (I-008).

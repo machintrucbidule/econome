@@ -8,6 +8,7 @@ package server_test
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -147,5 +148,54 @@ func TestSmokeEnvelopeModal(t *testing.T) {
 	}
 	if !strings.Contains(listText, "Loyers") {
 		t.Errorf("new envelope not shown in the list: %q", listText)
+	}
+}
+
+// TestSmokeMonthInitRecompute proves the month-init draft recomputes the residual
+// server-side in a real browser (CSP-clean): editing a leaf amount fires an htmx
+// PATCH that swaps the engine-computed figures fragment. Dropping the income to 0
+// flips the residual band to the negative-residual state.
+func TestSmokeMonthInitRecompute(t *testing.T) {
+	ts, client := setupOwner(t)
+	base := ts.URL
+	fID := mkAccountID(t, base, client, "Fortuneo", "current", "sweep")
+	mkEnvHTTP(t, base, client, url.Values{
+		"name": {"Salaire"}, "flow_type": {"income"}, "account_id": {fID},
+		"mode": {"fixed_recurring"}, "default_amount": {"2600,00"}, "frequency": {"monthly"}, "expected_day": {"27"},
+	})
+	mkEnvHTTP(t, base, client, url.Values{
+		"name": {"Loyers"}, "flow_type": {"expense"}, "account_id": {fID},
+		"mode": {"fixed_recurring"}, "default_amount": {"1050,00"}, "frequency": {"monthly"}, "expected_day": {"5"},
+	})
+
+	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true))...)
+	defer cancelAlloc()
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+	ctx, cancelT := context.WithTimeout(ctx, 50*time.Second)
+	defer cancelT()
+
+	var figuresText string
+	err := chromedp.Run(
+		ctx,
+		chromedp.Navigate(ts.URL+"/login"),
+		chromedp.WaitVisible(`#email`, chromedp.ByID),
+		chromedp.SendKeys(`#email`, "owner@example.org", chromedp.ByID),
+		chromedp.SendKeys(`#password`, "Tr0ub4dour&3xtra", chromedp.ByID),
+		chromedp.Submit(`#password`, chromedp.ByID),
+		chromedp.WaitVisible(`.app`, chromedp.ByQuery),
+		chromedp.Navigate(ts.URL+"/month-init?period=2026-06"),
+		chromedp.WaitVisible(`#mi-figures`, chromedp.ByID),
+		// Drop the income (first leaf) to 0 and fire change → htmx PATCH recompute.
+		chromedp.Evaluate(`(function(){var i=document.querySelector('.amt-inp');i.value='0,00';i.dispatchEvent(new Event('change',{bubbles:true}));})()`, nil),
+		chromedp.Sleep(400*time.Millisecond),
+		chromedp.Text(`#mi-figures`, &figuresText, chromedp.ByID),
+	)
+	if err != nil {
+		t.Fatalf("chromedp month-init smoke: %v", err)
+	}
+	if !strings.Contains(figuresText, "négatif") {
+		t.Errorf("residual did not recompute to negative after dropping income: %q", figuresText)
 	}
 }

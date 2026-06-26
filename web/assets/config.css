@@ -98,3 +98,27 @@
 .etable .auto { color: var(--faint); font-style: italic; }
 .etable .chev { background: none; border: 0; cursor: pointer; font-size: 14px; color: var(--muted); transition: transform .12s; }
 .etable .chev.open { transform: rotate(90deg); }
+
+/* --- Month-initialisation assistant (increment 5) --- */
+.draftbadge { background: var(--warn-soft); color: var(--warn); font-weight: 800; font-size: 11.5px; padding: 3px 10px; border-radius: 999px; }
+.mi-intro { color: var(--muted); font-size: 13.5px; margin: 0 0 16px; }
+.startcards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
+@media (max-width: 760px) { .startcards { grid-template-columns: 1fr; } }
+.startcard { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; background: var(--surface); }
+.startcard .l { color: var(--muted); font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.startcard .v { font-size: 24px; font-weight: 800; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.startcard .s { color: var(--faint); font-size: 12px; margin-top: 5px; line-height: 1.45; }
+.itable { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 18px; }
+.itable th, .itable td { white-space: nowrap; padding: 9px 10px; border-bottom: 1px solid var(--line); font-size: 14px; text-align: left; }
+.itable th { color: var(--muted); font-weight: 700; font-size: 12px; }
+.itable th.n, .itable td.n { text-align: right; font-variant-numeric: tabular-nums; }
+.itable td.pnm, .itable th.pnm { white-space: normal; }
+.itable .amt-inp { width: 120px; text-align: right; }
+.itable .xfaint td { color: var(--faint); }
+.gchip { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.gen-prevu { background: var(--brand-soft); color: var(--brand); }
+.gen-alloc { background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
+.mi-band { max-width: 520px; margin-bottom: 14px; }
+.mi-total { display: flex; justify-content: space-between; align-items: baseline; max-width: 520px; padding: 10px 2px; font-variant-numeric: tabular-nums; }
+.mi-total span { color: var(--muted); font-size: 13px; }
+.mi-total b { font-size: 18px; }
