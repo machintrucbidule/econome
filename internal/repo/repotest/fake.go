@@ -16,18 +16,26 @@ import (
 )
 
 type data struct {
-	mu           sync.Mutex
-	users        map[int64]domain.User
-	sessions     map[int64]domain.Session
-	settings     map[int64]domain.Settings
-	accounts     map[int64]domain.Account
-	categories   map[int64]domain.Category
-	envelopes    map[int64]domain.Envelope
-	allocations  map[int64]domain.Allocation
-	transactions map[int64]domain.Transaction
-	nextUser     int64
-	nextSession  int64
-	nextID       int64 // shared counter for budget entities
+	mu             sync.Mutex
+	users          map[int64]domain.User
+	sessions       map[int64]domain.Session
+	settings       map[int64]domain.Settings
+	accounts       map[int64]domain.Account
+	categories     map[int64]domain.Category
+	envelopes      map[int64]domain.Envelope
+	allocations    map[int64]domain.Allocation
+	transactions   map[int64]domain.Transaction
+	periods        map[int64]domain.Period
+	periodEvents   map[int64]domain.PeriodEvent
+	snapshots      map[int64]domain.Snapshot
+	networthMonths map[int64]domain.NetworthMonth
+	labels         map[int64]domain.LabelMapping
+	uiPrefs        map[int64]domain.UIPreference
+	invitations    map[int64]domain.Invitation
+	totpBackups    map[int64]domain.TOTPBackupCode
+	nextUser       int64
+	nextSession    int64
+	nextID         int64 // shared counter for budget/lifecycle entities
 }
 
 func (d *data) id() int64 {
@@ -37,33 +45,52 @@ func (d *data) id() int64 {
 
 // Store is an in-memory fake of *repo.Store.
 type Store struct {
-	d            *data
-	Users        repo.UserRepo
-	Sessions     repo.SessionRepo
-	Settings     repo.SettingsRepo
-	Accounts     repo.AccountRepo
-	Categories   repo.CategoryRepo
-	Envelopes    repo.EnvelopeRepo
-	Allocations  repo.AllocationRepo
-	Transactions repo.TransactionRepo
+	d              *data
+	Users          repo.UserRepo
+	Sessions       repo.SessionRepo
+	Settings       repo.SettingsRepo
+	Accounts       repo.AccountRepo
+	Categories     repo.CategoryRepo
+	Envelopes      repo.EnvelopeRepo
+	Allocations    repo.AllocationRepo
+	Transactions   repo.TransactionRepo
+	Periods        repo.PeriodRepo
+	PeriodEvents   repo.PeriodEventRepo
+	Snapshots      repo.SnapshotRepo
+	NetworthMonths repo.NetworthMonthRepo
+	Labels         repo.LabelMappingRepo
+	UIPreferences  repo.UIPreferenceRepo
+	Invitations    repo.InvitationRepo
+	TOTPBackups    repo.TOTPBackupRepo
 }
 
 // NewStore returns an empty in-memory store.
 func NewStore() *Store {
 	d := &data{
-		users:        map[int64]domain.User{},
-		sessions:     map[int64]domain.Session{},
-		settings:     map[int64]domain.Settings{},
-		accounts:     map[int64]domain.Account{},
-		categories:   map[int64]domain.Category{},
-		envelopes:    map[int64]domain.Envelope{},
-		allocations:  map[int64]domain.Allocation{},
-		transactions: map[int64]domain.Transaction{},
+		users:          map[int64]domain.User{},
+		sessions:       map[int64]domain.Session{},
+		settings:       map[int64]domain.Settings{},
+		accounts:       map[int64]domain.Account{},
+		categories:     map[int64]domain.Category{},
+		envelopes:      map[int64]domain.Envelope{},
+		allocations:    map[int64]domain.Allocation{},
+		transactions:   map[int64]domain.Transaction{},
+		periods:        map[int64]domain.Period{},
+		periodEvents:   map[int64]domain.PeriodEvent{},
+		snapshots:      map[int64]domain.Snapshot{},
+		networthMonths: map[int64]domain.NetworthMonth{},
+		labels:         map[int64]domain.LabelMapping{},
+		uiPrefs:        map[int64]domain.UIPreference{},
+		invitations:    map[int64]domain.Invitation{},
+		totpBackups:    map[int64]domain.TOTPBackupCode{},
 	}
 	return &Store{
 		d: d, Users: fakeUsers{d}, Sessions: fakeSessions{d}, Settings: fakeSettings{d},
 		Accounts: fakeAccounts{d}, Categories: fakeCategories{d}, Envelopes: fakeEnvelopes{d},
 		Allocations: fakeAllocations{d}, Transactions: fakeTransactions{d},
+		Periods: fakePeriods{d}, PeriodEvents: fakePeriodEvents{d}, Snapshots: fakeSnapshots{d},
+		NetworthMonths: fakeNetworthMonths{d}, Labels: fakeLabels{d}, UIPreferences: fakeUIPrefs{d},
+		Invitations: fakeInvitations{d}, TOTPBackups: fakeTOTPBackups{d},
 	}
 }
 

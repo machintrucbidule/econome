@@ -55,29 +55,45 @@ type Txer interface {
 
 // Store is the SQLite-backed implementation of the repositories + Txer.
 type Store struct {
-	db           *sql.DB
-	Users        UserRepo
-	Sessions     SessionRepo
-	Settings     SettingsRepo
-	Accounts     AccountRepo
-	Categories   CategoryRepo
-	Envelopes    EnvelopeRepo
-	Allocations  AllocationRepo
-	Transactions TransactionRepo
+	db             *sql.DB
+	Users          UserRepo
+	Sessions       SessionRepo
+	Settings       SettingsRepo
+	Accounts       AccountRepo
+	Categories     CategoryRepo
+	Envelopes      EnvelopeRepo
+	Allocations    AllocationRepo
+	Transactions   TransactionRepo
+	Periods        PeriodRepo
+	PeriodEvents   PeriodEventRepo
+	Snapshots      SnapshotRepo
+	NetworthMonths NetworthMonthRepo
+	Labels         LabelMappingRepo
+	UIPreferences  UIPreferenceRepo
+	Invitations    InvitationRepo
+	TOTPBackups    TOTPBackupRepo
 }
 
 // New wires the SQLite repositories over db.
 func New(db *sql.DB) *Store {
 	return &Store{
-		db:           db,
-		Users:        userRepo{},
-		Sessions:     sessionRepo{},
-		Settings:     settingsRepo{},
-		Accounts:     accountRepo{},
-		Categories:   categoryRepo{},
-		Envelopes:    envelopeRepo{},
-		Allocations:  allocationRepo{},
-		Transactions: transactionRepo{},
+		db:             db,
+		Users:          userRepo{},
+		Sessions:       sessionRepo{},
+		Settings:       settingsRepo{},
+		Accounts:       accountRepo{},
+		Categories:     categoryRepo{},
+		Envelopes:      envelopeRepo{},
+		Allocations:    allocationRepo{},
+		Transactions:   transactionRepo{},
+		Periods:        periodRepo{},
+		PeriodEvents:   periodEventRepo{},
+		Snapshots:      snapshotRepo{},
+		NetworthMonths: networthMonthRepo{},
+		Labels:         labelMappingRepo{},
+		UIPreferences:  uiPreferenceRepo{},
+		Invitations:    invitationRepo{},
+		TOTPBackups:    totpBackupRepo{},
 	}
 }
 
