@@ -172,6 +172,30 @@ func (s ArchiveStatus) Valid() bool {
 	}
 }
 
+// EnvelopeState is the derived five-state status of an expense envelope
+// (functional/03 §3, C2/C8). Income/transfer envelopes do not use it. The view
+// localises these codes (state.none/expected/partial/paid/overrun).
+type EnvelopeState string
+
+// Envelope states (expenses only).
+const (
+	StateNone     EnvelopeState = "none"
+	StateExpected EnvelopeState = "expected"
+	StatePartial  EnvelopeState = "partial"
+	StatePaid     EnvelopeState = "paid"
+	StateOverrun  EnvelopeState = "overrun"
+)
+
+// Valid reports whether s is a known envelope state.
+func (s EnvelopeState) Valid() bool {
+	switch s {
+	case StateNone, StateExpected, StatePartial, StatePaid, StateOverrun:
+		return true
+	default:
+		return false
+	}
+}
+
 // Account is a money account (technical/03 §3.1).
 type Account struct {
 	ID             int64
