@@ -21,7 +21,8 @@ func TestSmokeLoginRendersShell(t *testing.T) {
 	seedOwner(t, ts)
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true))...)
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true),
+			chromedp.WSURLReadTimeout(45*time.Second))...) // O-19: harden the flaky Chrome websocket-launch
 	defer cancelAlloc()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
@@ -66,7 +67,8 @@ func TestSmokeForecastRowExpand(t *testing.T) {
 	bodyOf(t, formReq(t, client, "POST", base+"/month-init?period=2026-06", url.Values{"_csrf": {tok}}))
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true))...)
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true),
+			chromedp.WSURLReadTimeout(45*time.Second))...) // O-19: harden the flaky Chrome websocket-launch
 	defer cancelAlloc()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
@@ -116,7 +118,8 @@ func TestSmokeForecastInlineEdit(t *testing.T) {
 	bodyOf(t, formReq(t, client, "POST", base+"/month-init?period=2026-06", url.Values{"_csrf": {tok}}))
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true))...)
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true),
+			chromedp.WSURLReadTimeout(45*time.Second))...) // O-19: harden the flaky Chrome websocket-launch
 	defer cancelAlloc()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
@@ -157,7 +160,8 @@ func TestSmokeParametersAccountModal(t *testing.T) {
 	seedOwner(t, ts)
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true))...)
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true),
+			chromedp.WSURLReadTimeout(45*time.Second))...) // O-19: harden the flaky Chrome websocket-launch
 	defer cancelAlloc()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
@@ -205,7 +209,8 @@ func TestSmokeEnvelopeModal(t *testing.T) {
 	}))
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true))...)
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true),
+			chromedp.WSURLReadTimeout(45*time.Second))...) // O-19: harden the flaky Chrome websocket-launch
 	defer cancelAlloc()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
@@ -266,7 +271,8 @@ func TestSmokeMonthInitRecompute(t *testing.T) {
 	})
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true))...)
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true),
+			chromedp.WSURLReadTimeout(45*time.Second))...) // O-19: harden the flaky Chrome websocket-launch
 	defer cancelAlloc()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
