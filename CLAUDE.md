@@ -105,14 +105,16 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 2 (engine + reconciliation) — DONE** (PRs #9–#13 merged; CI green; engine + reconciliation
-subagent reviews passed). The pure `internal/engine` (all of `functional/03`: envelope five states,
-balances, low point, savings/secured/cascade, PEA net, net worth, aggregation) and the pure
-`internal/engine/reconcile.go` (the DSP2-shared decision) are sealed at **91.7 %** coverage; golden +
-property + matrix tests. Decisions I-001..I-018. See `docs/progress/0002-engine.md`. **Next: increment 3 =
-data model + repositories** (`development-plan/01-phased-plan.md`) — awaiting the user's go-ahead.
-(Increments 0–1 also done: scaffold, then the walking skeleton — owner setup → login → shell → logout,
-sessions/lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`.)
+**Increment 3 (data model + repositories) — DONE** (PRs #15–#17 merged; CI green). The full budget schema
+(migrations 0002–0006: account/category/envelope/allocation/transaction, period/period_event,
+savings_snapshot/networth_month, label_mapping/ui_preference, invitation/totp_backup_code, `technical/03`
+§3–§5) and the `user_id`-scoped repositories + in-memory fakes for all 13 tables are in place; migration
+(forward-from-empty + production-shaped) + integration + parity tests green. Decisions I-001..I-020. See
+`docs/progress/0003-data-model.md`. **Next: increment 4 = configuration screens (Parameters + Envelopes)**
+(`development-plan/01-phased-plan.md`) — awaiting the user's go-ahead.
+(Increments 0–2 also done: scaffold; the walking skeleton — owner setup → login → shell → logout,
+sessions/lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; and the sealed pure engine +
+reconciliation at 91.7 % coverage.)
 
 > Reminders: `main` is protected — all changes via PR → CI green → merge; required checks now include
 > `e2e chrome smoke` (O-7 resolved). Dependabot minor/patch auto-merge on green, majors manual (I-008).
