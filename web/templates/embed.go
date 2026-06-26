@@ -8,7 +8,7 @@ package templates
 
 import "embed"
 
-// FS holds the embedded html/template files.
+// FS holds the embedded html/template files (layouts, screens, fragments).
 //
-//go:embed README.md
+//go:embed *.html
 var FS embed.FS

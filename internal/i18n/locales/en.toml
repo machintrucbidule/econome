@@ -1,0 +1,52 @@
+# English catalog. Keys mirror fr.toml exactly; a missing key falls back to FR.
+
+"app.name" = "EconoMe"
+"app.tagline" = "Your accounts, without spreadsheets."
+
+"nav.budget" = "Budget"
+"nav.patrimoine" = "Net worth"
+"nav.configuration" = "Configuration"
+
+"shell.scope" = "View"
+"shell.scope.all" = "All accounts"
+"shell.logout" = "Sign out"
+"shell.theme" = "Light/dark theme"
+"shell.placeholder.title" = "Welcome"
+"shell.placeholder.body" = "The application is under construction. Budget screens arrive in the next increments."
+"shell.demo.balance" = "Demonstration balance"
+
+"setup.title" = "First-run setup"
+"setup.heading" = "Create the owner account"
+"setup.intro" = "First use: create the administrator account for this instance."
+"setup.email" = "Email address"
+"setup.password" = "Password"
+"setup.password_confirm" = "Confirm password"
+"setup.language" = "Language"
+"setup.currency" = "Currency"
+"setup.submit" = "Create account"
+"setup.error" = "Setup failed. Please retry."
+
+"login.title" = "Sign in"
+"login.heading" = "Sign in"
+"login.email" = "Email address"
+"login.password" = "Password"
+"login.remember" = "Remember me"
+"login.submit" = "Sign in"
+"login.error_generic" = "Incorrect email or password."
+"login.locked" = "Too many attempts. Try again in {0} s."
+"login.totp_not_enabled" = "Two-factor authentication is not enabled."
+
+"password.rule.min" = "At least 12 characters"
+"password.rule.lower" = "A lowercase letter"
+"password.rule.upper" = "An uppercase letter"
+"password.rule.digit" = "A digit"
+"password.rule.symbol" = "A symbol"
+
+"validation.email.required" = "Email address is required."
+"validation.email.invalid" = "Invalid email address."
+"validation.password.too_short" = "Password must be at least 12 characters."
+"validation.password.classes" = "Password must contain lowercase, uppercase, digit and symbol."
+"validation.password.mismatch" = "Passwords do not match."
+
+"lang.fr" = "French"
+"lang.en" = "English"

@@ -1,0 +1,55 @@
+{{define "setup"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "head" .}}<title>{{.T "setup.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="authstage">
+  <div class="authwrap">
+    <div class="brand">Econo<b>Me</b></div>
+    <div class="tagline">{{.T "app.tagline"}}</div>
+    <div class="auth-card">
+      <h1>{{.T "setup.heading"}}</h1>
+      <p class="muted">{{.T "setup.intro"}}</p>
+      {{if .GenericError}}<div class="errbox">{{.GenericError}}</div>{{end}}
+      <form method="post" action="/setup">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <div class="fld">
+          <label for="email">{{.T "setup.email"}}</label>
+          <input class="inp" id="email" type="email" name="email" value="{{.Email}}" autocomplete="username" required autofocus>
+          {{with .FieldError "email"}}<div class="ferr">{{.}}</div>{{end}}
+        </div>
+        <div class="fld">
+          <label for="password">{{.T "setup.password"}}</label>
+          <input class="inp" id="password" type="password" name="password" autocomplete="new-password" required>
+          {{with .FieldError "password"}}<div class="ferr">{{.}}</div>{{end}}
+          <ul class="pwrules">
+            <li>{{.T "password.rule.min"}}</li>
+            <li>{{.T "password.rule.lower"}}</li>
+            <li>{{.T "password.rule.upper"}}</li>
+            <li>{{.T "password.rule.digit"}}</li>
+            <li>{{.T "password.rule.symbol"}}</li>
+          </ul>
+        </div>
+        <div class="fld">
+          <label for="password_confirm">{{.T "setup.password_confirm"}}</label>
+          <input class="inp" id="password_confirm" type="password" name="password_confirm" autocomplete="new-password" required>
+          {{with .FieldError "password_confirm"}}<div class="ferr">{{.}}</div>{{end}}
+        </div>
+        <div class="fld">
+          <label for="language">{{.T "setup.language"}}</label>
+          <select class="inp" id="language" name="language">
+            <option value="fr">{{.T "lang.fr"}}</option>
+            <option value="en">{{.T "lang.en"}}</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label for="currency">{{.T "setup.currency"}}</label>
+          <input class="inp" id="currency" type="text" name="currency" value="EUR">
+        </div>
+        <button class="btn primary btn-block" type="submit">{{.T "setup.submit"}}</button>
+      </form>
+    </div>
+  </div>
+</div>
+{{template "scripts" .}}
+</body>
+</html>{{end}}

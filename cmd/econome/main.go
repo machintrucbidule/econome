@@ -20,8 +20,11 @@ import (
 	"time"
 
 	"econome/internal/config"
+	"econome/internal/i18n"
 	"econome/internal/repo"
 	"econome/internal/server"
+	"econome/internal/services"
+	"econome/internal/view"
 	"econome/migrations"
 )
 
@@ -49,7 +52,8 @@ func run() error {
 	if err := cfg.EnsureDataDir(); err != nil {
 		return err
 	}
-	if _, err := cfg.EnsureSecret(); err != nil {
+	secret, err := cfg.EnsureSecret()
+	if err != nil {
 		return err
 	}
 
@@ -65,7 +69,19 @@ func run() error {
 	}
 	slog.Info("database ready")
 
-	srv := server.New(cfg)
+	// Wire the layers: repo -> service; catalog -> renderer; then the server.
+	store := repo.New(db)
+	catalog, err := i18n.Load()
+	if err != nil {
+		return err
+	}
+	rdr, err := view.New(catalog)
+	if err != nil {
+		return err
+	}
+	svc := services.New(store.Users, store.Sessions, store.Settings, store, secret)
+
+	srv := server.New(cfg, svc, rdr)
 
 	// Run the server until a termination signal, then shut down gracefully.
 	errCh := make(chan error, 1)

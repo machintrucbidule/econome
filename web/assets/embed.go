@@ -11,7 +11,8 @@ package assets
 
 import "embed"
 
-// FS holds the embedded static frontend assets (design system + vendored libs).
+// FS holds the embedded static frontend assets: the verbatim design system
+// (econome.css/js) plus vendored htmx (htmx.min.js, pinned 2.0.x, I-009).
 //
-//go:embed econome.css econome.js
+//go:embed *.css *.js
 var FS embed.FS
