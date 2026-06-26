@@ -21,6 +21,7 @@ func TestReconcileMatrix(t *testing.T) {
 	d20 := domain.NewDate(2026, 6, 20)
 	base := mv(1, -1, 10000, d10)
 
+	d13 := domain.NewDate(2026, 6, 13) // exactly 3 days from d10 (window boundary)
 	cases := []struct {
 		name       string
 		m          Movement
@@ -28,16 +29,20 @@ func TestReconcileMatrix(t *testing.T) {
 		tol        Tolerance
 		wantKind   DecisionKind
 		wantTxn    int64
+		wantAmbig  []int64
 	}{
-		{"zero candidates", base, nil, exact, CreateNew, 0},
-		{"one exact match", base, []Candidate{cand(7, 1, -1, 10000, d12)}, exact, ReconcileInPlace, 7},
-		{"amount mismatch (exact)", base, []Candidate{cand(7, 1, -1, 10001, d12)}, exact, CreateNew, 0},
-		{"amount within tolerance", base, []Candidate{cand(7, 1, -1, 10003, d12)}, Tolerance{Amount: 5, DateWindowDays: 3}, ReconcileInPlace, 7},
-		{"date outside window", base, []Candidate{cand(7, 1, -1, 10000, d20)}, exact, CreateNew, 0},
-		{"wrong sign", base, []Candidate{cand(7, 1, 1, 10000, d12)}, exact, CreateNew, 0},
-		{"wrong account", base, []Candidate{cand(7, 2, -1, 10000, d12)}, exact, CreateNew, 0},
-		{"two matches ambiguous", base, []Candidate{cand(7, 1, -1, 10000, d12), cand(8, 1, -1, 10000, d10)}, exact, Ambiguous, 0},
-		{"one of two matches", base, []Candidate{cand(7, 1, -1, 10000, d12), cand(8, 2, -1, 10000, d10)}, exact, ReconcileInPlace, 7},
+		{"zero candidates", base, nil, exact, CreateNew, 0, nil},
+		{"one exact match", base, []Candidate{cand(7, 1, -1, 10000, d12)}, exact, ReconcileInPlace, 7, nil},
+		{"amount mismatch (exact)", base, []Candidate{cand(7, 1, -1, 10001, d12)}, exact, CreateNew, 0, nil},
+		{"amount within tolerance", base, []Candidate{cand(7, 1, -1, 10003, d12)}, Tolerance{Amount: 5, DateWindowDays: 3}, ReconcileInPlace, 7, nil},
+		{"amount at tolerance boundary", base, []Candidate{cand(7, 1, -1, 10005, d12)}, Tolerance{Amount: 5, DateWindowDays: 3}, ReconcileInPlace, 7, nil},
+		{"amount just past tolerance", base, []Candidate{cand(7, 1, -1, 10006, d12)}, Tolerance{Amount: 5, DateWindowDays: 3}, CreateNew, 0, nil},
+		{"date at window boundary", base, []Candidate{cand(7, 1, -1, 10000, d13)}, exact, ReconcileInPlace, 7, nil},
+		{"date outside window", base, []Candidate{cand(7, 1, -1, 10000, d20)}, exact, CreateNew, 0, nil},
+		{"wrong sign", base, []Candidate{cand(7, 1, 1, 10000, d12)}, exact, CreateNew, 0, nil},
+		{"wrong account", base, []Candidate{cand(7, 2, -1, 10000, d12)}, exact, CreateNew, 0, nil},
+		{"two matches ambiguous", base, []Candidate{cand(7, 1, -1, 10000, d12), cand(8, 1, -1, 10000, d10)}, exact, Ambiguous, 0, []int64{7, 8}},
+		{"one of two matches", base, []Candidate{cand(7, 1, -1, 10000, d12), cand(8, 2, -1, 10000, d10)}, exact, ReconcileInPlace, 7, nil},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -48,8 +53,15 @@ func TestReconcileMatrix(t *testing.T) {
 			if c.wantKind == ReconcileInPlace && got.TxnID != c.wantTxn {
 				t.Errorf("txnID = %d, want %d", got.TxnID, c.wantTxn)
 			}
-			if c.wantKind == Ambiguous && len(got.AmbiguousIDs) < 2 {
-				t.Errorf("ambiguous ids = %v, want >= 2", got.AmbiguousIDs)
+			if c.wantKind == Ambiguous {
+				if len(got.AmbiguousIDs) != len(c.wantAmbig) {
+					t.Fatalf("ambiguous ids = %v, want %v", got.AmbiguousIDs, c.wantAmbig)
+				}
+				for i, id := range c.wantAmbig {
+					if got.AmbiguousIDs[i] != id {
+						t.Errorf("ambiguous[%d] = %d, want %d", i, got.AmbiguousIDs[i], id)
+					}
+				}
 			}
 		})
 	}
