@@ -40,6 +40,27 @@
     });
   }
 
+  function off(id, isOff) { var el = document.getElementById(id); if (el) el.classList.toggle("off", isOff); }
+
+  /* envelope modal field adaptation: frequency/day only for fixed_recurring,
+     month only for non-monthly fixed, amount disabled for residual, the new-parent
+     name input shown only when "+ Nouvelle catégorie…" is picked */
+  function adaptEnvelope() {
+    var modeEl = document.getElementById("e-mode");
+    if (!modeEl) return;
+    var mode = modeEl.value;
+    var freqEl = document.getElementById("e-freq");
+    var freq = freqEl ? freqEl.value : "monthly";
+    var isFixed = mode === "fixed_recurring";
+    off("w-freq", !isFixed);
+    off("w-day", !isFixed);
+    off("w-month", !(isFixed && freq !== "monthly"));
+    off("w-amount", mode === "residual");
+    var parent = document.getElementById("e-parent");
+    var nw = document.getElementById("w-newparent");
+    if (parent && nw) nw.classList.toggle("hidden", parent.value !== "__new__");
+  }
+
   /* account modal field adaptation: month-end policy only for current accounts,
      ceiling only for savings accounts */
   function adaptAccount() {
@@ -72,6 +93,11 @@
     } else if (action === "cascade-remove") {
       var id = el.getAttribute("data-id");
       cascadePost(cascadeIDs().filter(function (x) { return x !== id; }));
+    } else if (action === "toggle-group") {
+      var k = el.getAttribute("data-k");
+      el.classList.toggle("open");
+      var open = el.classList.contains("open");
+      $$('tr[data-c="' + k + '"]').forEach(function (tr) { tr.classList.toggle("hidden", !open); });
     }
   });
 
@@ -79,6 +105,7 @@
   document.addEventListener("change", function (e) {
     var el = e.target;
     if (el.id === "a-type") { adaptAccount(); return; }
+    if (el.id === "e-mode" || el.id === "e-freq" || el.id === "e-parent") { adaptEnvelope(); return; }
     var action = el.getAttribute && el.getAttribute("data-action");
     if (action === "toggle-arch") {
       var on = el.checked;
@@ -99,10 +126,12 @@
         if (window.htmx && e.detail && e.detail.target) window.htmx.process(e.detail.target);
         initCascade();
         adaptAccount();
+        adaptEnvelope();
       });
     }
     initCascade();
     adaptAccount();
+    adaptEnvelope();
   }
   if (document.readyState !== "loading") init();
   else document.addEventListener("DOMContentLoaded", init);

@@ -80,3 +80,21 @@
 .optlabel input:focus-visible + .optcard { outline: 2px solid var(--brand); outline-offset: 2px; }
 .cardform-f { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 .savedmsg { color: var(--ok); font-weight: 700; font-size: 12.5px; }
+
+/* --- Enveloppes --- */
+.etable th, .etable td { white-space: nowrap; }
+.etable td.enm, .etable th.enm { white-space: normal; }
+.mb { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.mb.fixe { background: var(--brand-soft); color: var(--brand); }
+.mb.var { background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
+.mb.res { background: var(--brand); color: #fff; }
+.mb.rev { background: var(--ok-soft); color: var(--ok); }
+.mb.xfer { background: var(--sunk); color: var(--faint); border: 1px solid var(--line); }
+.toolrow { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.toolrow .sp { flex: 1; }
+.archtog { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.editbtn { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 8px; width: 30px; height: 30px; cursor: pointer; font-size: 14px; }
+.editbtn:hover { border-color: var(--brand); color: var(--brand); }
+.etable .auto { color: var(--faint); font-style: italic; }
+.etable .chev { background: none; border: 0; cursor: pointer; font-size: 14px; color: var(--muted); transition: transform .12s; }
+.etable .chev.open { transform: rotate(90deg); }
