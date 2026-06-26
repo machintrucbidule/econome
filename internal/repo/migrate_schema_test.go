@@ -12,7 +12,8 @@ import (
 )
 
 // allTables are every table the migrations must create (baseline 0001 +
-// schema_migrations from the runner + the budget schema 0002–0006).
+// schema_migrations from the runner + the budget schema 0002–0006 +
+// envelope.dest_account_id added by 0007).
 var allTables = []string{
 	"user", "session", "settings", "schema_migrations",
 	"account", "category", "envelope", "allocation", "transaction",
@@ -36,13 +37,18 @@ func TestMigrate_FullSchemaForwardFromEmpty(t *testing.T) {
 	if err := db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&version); err != nil {
 		t.Fatalf("read version: %v", err)
 	}
-	if version != 6 {
-		t.Errorf("schema version = %d, want 6", version)
+	if version != 7 {
+		t.Errorf("schema version = %d, want 7", version)
+	}
+	// 0007 added envelope.dest_account_id (T11) — it must be queryable.
+	if _, err := db.Exec(`SELECT dest_account_id FROM envelope WHERE 1 = 0`); err != nil {
+		t.Errorf("envelope.dest_account_id missing: %v", err)
 	}
 }
 
 // Production-shaped: a DB already at version 1 with an owner+settings row migrates
-// forward to 6 without data loss (the unattended-Watchtower upgrade path).
+// forward to the latest version without data loss (the unattended-Watchtower
+// upgrade path), and the additive 0007 column lands on the existing schema.
 func TestMigrate_ProductionShaped(t *testing.T) {
 	db, dir := openTestDB(t)
 	ctx := context.Background()
@@ -68,9 +74,9 @@ func TestMigrate_ProductionShaped(t *testing.T) {
 		t.Fatalf("seed settings: %v", err)
 	}
 
-	// Migrate forward to 6 against the full set.
+	// Migrate forward against the full set.
 	if err := repo.Migrate(ctx, db, migrations.FS, backups); err != nil {
-		t.Fatalf("migrate to 6: %v", err)
+		t.Fatalf("migrate forward: %v", err)
 	}
 
 	// Data preserved + new tables present.
@@ -82,6 +88,10 @@ func TestMigrate_ProductionShaped(t *testing.T) {
 		if !tableExists(t, db, tbl) {
 			t.Errorf("table %q missing after forward migration", tbl)
 		}
+	}
+	// The additive 0007 column landed on the pre-existing schema (T11).
+	if _, err := db.Exec(`SELECT dest_account_id FROM envelope WHERE 1 = 0`); err != nil {
+		t.Errorf("envelope.dest_account_id missing after forward migration: %v", err)
 	}
 	// A backup was taken before each run with pending migrations (v1 + the v2–6 batch).
 	if backupCount(t, backups) < 2 {

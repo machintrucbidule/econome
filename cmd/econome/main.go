@@ -90,6 +90,7 @@ func run() error {
 		Transactions: store.Transactions,
 		Snapshots:    store.Snapshots,
 		Periods:      store.Periods,
+		PeriodEvents: store.PeriodEvents,
 		Tx:           store,
 		Secret:       secret,
 	})

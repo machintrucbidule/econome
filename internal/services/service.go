@@ -64,6 +64,7 @@ type Service struct {
 	transactions repo.TransactionRepo
 	snapshots    repo.SnapshotRepo
 	periods      repo.PeriodRepo
+	periodEvents repo.PeriodEventRepo
 	tx           repo.Txer
 	secret       []byte
 	throttle     *auth.Throttle
@@ -85,6 +86,7 @@ type Deps struct {
 	Transactions repo.TransactionRepo
 	Snapshots    repo.SnapshotRepo
 	Periods      repo.PeriodRepo
+	PeriodEvents repo.PeriodEventRepo
 	Tx           repo.Txer
 	Secret       []byte
 }
@@ -103,6 +105,7 @@ func New(d Deps) *Service {
 		transactions: d.Transactions,
 		snapshots:    d.Snapshots,
 		periods:      d.Periods,
+		periodEvents: d.PeriodEvents,
 		tx:           d.Tx,
 		secret:       d.Secret,
 		throttle:     auth.NewThrottle(20, time.Minute),

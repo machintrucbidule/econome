@@ -41,4 +41,14 @@ const (
 	MsgFlowTypeConflict     = "validation.category.flow_type_conflict"
 	MsgCategoryHasChildren  = "validation.category.has_children"
 	MsgAccountRequired      = "validation.envelope.account_required"
+
+	// Month-initialisation assistant (functional/09).
+	MsgPeriodInvalid = "validation.period.invalid"
+
+	// Transfer-envelope destination (T11, functional/09 §3.4).
+	MsgDestRequired    = "validation.envelope.dest_required"
+	MsgDestNotAllowed  = "validation.envelope.dest_not_allowed"
+	MsgDestSameAccount = "validation.envelope.dest_same_account"
+	MsgDestInvalid     = "validation.envelope.dest_invalid"
+	MsgDestNotCurrent  = "validation.envelope.dest_not_current"
 )

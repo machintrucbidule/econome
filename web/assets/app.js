@@ -56,6 +56,8 @@
     off("w-day", !isFixed);
     off("w-month", !(isFixed && freq !== "monthly"));
     off("w-amount", mode === "residual");
+    var flowEl = document.getElementById("e-flow");
+    off("w-dest", !(flowEl && flowEl.value === "transfer"));
     var parent = document.getElementById("e-parent");
     var nw = document.getElementById("w-newparent");
     if (parent && nw) nw.classList.toggle("hidden", parent.value !== "__new__");
@@ -105,7 +107,7 @@
   document.addEventListener("change", function (e) {
     var el = e.target;
     if (el.id === "a-type") { adaptAccount(); return; }
-    if (el.id === "e-mode" || el.id === "e-freq" || el.id === "e-parent") { adaptEnvelope(); return; }
+    if (el.id === "e-mode" || el.id === "e-freq" || el.id === "e-parent" || el.id === "e-flow") { adaptEnvelope(); return; }
     var action = el.getAttribute && el.getAttribute("data-action");
     if (action === "toggle-arch") {
       var on = el.checked;

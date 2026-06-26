@@ -40,6 +40,7 @@ func depsFromStore(store *repo.Store, secret []byte) Deps {
 		Transactions: store.Transactions,
 		Snapshots:    store.Snapshots,
 		Periods:      store.Periods,
+		PeriodEvents: store.PeriodEvents,
 		Tx:           store,
 		Secret:       secret,
 	}

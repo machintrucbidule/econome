@@ -237,6 +237,7 @@ type Envelope struct {
 	UserID        int64
 	CategoryID    int64
 	AccountID     int64
+	DestAccountID *int64 // transfer envelopes only — internal-transfer destination (T11); nil otherwise
 	Mode          Mode
 	DefaultAmount *int64
 	Frequency     *Frequency

@@ -64,6 +64,11 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	mux.Handle("POST /config/accounts/reorder", protected(http.HandlerFunc(h.CascadeReorder)))
 	mux.Handle("PATCH /config/settings", protected(http.HandlerFunc(h.SettingsPatch)))
 
+	// Month-initialisation assistant (increment 5).
+	mux.Handle("GET /month-init", protected(http.HandlerFunc(h.MonthInitGet)))
+	mux.Handle("PATCH /month-init/draft", protected(http.HandlerFunc(h.MonthInitDraft)))
+	mux.Handle("POST /month-init", protected(http.HandlerFunc(h.MonthInitCreate)))
+
 	// Configuration — Envelopes (increment 4, PR-b).
 	mux.Handle("GET /config/envelopes", protected(http.HandlerFunc(h.EnvelopesGet)))
 	mux.Handle("GET /config/envelopes/new", protected(http.HandlerFunc(h.EnvelopeFormGet)))

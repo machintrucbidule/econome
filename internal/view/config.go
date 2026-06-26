@@ -132,6 +132,7 @@ type EnvelopeFormView struct {
 	FlowType        string
 	Mode            string
 	AccountID       int64
+	DestAccountID   int64 // transfer destination (T11); 0 = none
 	DefaultStr      string
 	Frequency       string
 	DueMonth        string // single month value, "" if none
@@ -140,8 +141,10 @@ type EnvelopeFormView struct {
 	DefaultExpanded bool
 	IsResidual      bool
 	IsFixed         bool
+	IsTransfer      bool // flow_type == transfer → reveal the destination select
 	NonMonthly      bool
 	AccountOptions  []SelectOption
+	DestOptions     []SelectOption // current accounts the transfer may target
 	ParentOptions   []SelectOption
 	FlowOptions     []SelectOption
 	ModeOptions     []SelectOption

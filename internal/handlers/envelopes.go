@@ -57,6 +57,9 @@ func (h *Handlers) EnvelopeFormGet(w http.ResponseWriter, r *http.Request) {
 		fv.FlowType = string(cat.FlowType)
 		fv.Mode = string(e.Mode)
 		fv.AccountID = e.AccountID
+		if e.DestAccountID != nil {
+			fv.DestAccountID = *e.DestAccountID
+		}
 		fv.DefaultExpanded = cat.DefaultExpanded
 		if cat.ParentID != nil {
 			fv.ParentID = *cat.ParentID
@@ -156,6 +159,15 @@ func (h *Handlers) parseEnvelopeForm(r *http.Request) (services.EnvelopeInput, *
 	if v := r.PostFormValue("account_id"); v != "" {
 		in.AccountID, _ = strconv.ParseInt(v, 10, 64)
 	}
+	// Destination is only meaningful for a transfer envelope; ignore any stray
+	// value on other flows (the service rejects a dest on a non-transfer anyway).
+	if in.FlowType == string(domain.FlowTransfer) {
+		if v := r.PostFormValue("dest_account_id"); v != "" && v != "0" {
+			if d, err := strconv.ParseInt(v, 10, 64); err == nil {
+				in.DestAccountID = &d
+			}
+		}
+	}
 	// Parent: "__new__" reveals the name input; "0"/"" = none; else an existing id.
 	switch pv := r.PostFormValue("parent_id"); pv {
 	case "", "0":
@@ -219,6 +231,9 @@ func (h *Handlers) renderEnvelopeForm(w http.ResponseWriter, r *http.Request, is
 		Frequency:       in.Frequency,
 		DefaultExpanded: in.DefaultExpanded,
 		FieldErrors:     h.localizeFields(r, ve),
+	}
+	if in.DestAccountID != nil {
+		fv.DestAccountID = *in.DestAccountID
 	}
 	if in.ParentID != nil {
 		fv.ParentID = *in.ParentID
@@ -326,6 +341,10 @@ func (h *Handlers) fillEnvelopeFormOptions(r *http.Request, userID int64, fv *vi
 	for _, a := range accts {
 		if a.Status == domain.ArchiveActive {
 			fv.AccountOptions = append(fv.AccountOptions, view.SelectOption{Value: strconv.FormatInt(a.ID, 10), Label: a.Name})
+			// A transfer destination is always a current account (T11).
+			if a.Type == domain.AccountCurrent {
+				fv.DestOptions = append(fv.DestOptions, view.SelectOption{Value: strconv.FormatInt(a.ID, 10), Label: a.Name})
+			}
 		}
 	}
 	parents, err := h.svc.ParentOptions(r.Context(), userID)
@@ -360,6 +379,7 @@ func (h *Handlers) fillEnvelopeFormOptions(r *http.Request, userID int64, fv *vi
 func setEnvelopeFormFlags(fv *view.EnvelopeFormView) {
 	fv.IsResidual = fv.Mode == string(domain.ModeResidual)
 	fv.IsFixed = fv.Mode == string(domain.ModeFixedRecurring)
+	fv.IsTransfer = fv.FlowType == string(domain.FlowTransfer)
 	fv.NonMonthly = fv.IsFixed && fv.Frequency != string(domain.FreqMonthly)
 }
 
