@@ -105,7 +105,7 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 5 (month-initialisation assistant) — DONE** (CI gates green locally; PR pending). The first
+**Increment 5 (month-initialisation assistant) — DONE & MERGED** (PR #22). The first
 feature to **consume the pure engine through a screen**: `/month-init?period=&scope=` computes the editable,
 **non-persisted** draft (start cards, posts table, residual encart) recomputed **server-side by the engine**
 on each leaf edit (no client computation, I-025); "Créer le mois" (`POST /month-init`) materialises
@@ -116,10 +116,31 @@ expense/income → allocation + awaited txn; variable → allocation only; fixed
 engine-assembly seam (inc 6/7 reuse it). **T11**: `envelope.dest_account_id` added (migration `0007`,
 additive) so a transfer envelope stores its destination — the Enveloppes config gained a dest picker (current
 account ≠ source, service-validated). M26 rail scope filters the draft. `Service` now wires `PeriodEvents`.
-Decisions **T11**, **I-025..I-028**. See `docs/progress/0005-month-init.md`. **Next: increment 6 = Forecast +
-Journal + reconciliation orchestration** (`functional/05`/`06`, `development-plan/01-phased-plan.md`) —
-awaiting the user's go-ahead; demo **D3** follows. Open points **O-16** (no opening-balance column), **O-17**
-(snapshots-at-init for cascade-full), **O-18** (sweep start≈0 depends on the close increment's sweep txn).
+Decisions **T11**, **I-025..I-028**. See `docs/progress/0005-month-init.md`.
+
+**D2 checkpoint held** (running build, default port now **`:8765`**). Post-merge fixes shipped while the user
+tested, each its own merged PR: **#23** default listen port `:8080`→`:8765` (**I-029**); **#24** restored the
+`/setup`+`/login` card styling (the auth-layout CSS was never ported from the `login.html` mockup into
+`web/assets/econome.css` — regression test added); **#25** password **min length 12→8** (**M27**, supersedes
+A8's length) + wired the home shell's dead "Configuration" nav link to `/config/parameters`; **#26** the money
+parser accepts a `.` as decimal in fr-FR when unambiguous, fixing a ×100 (**I-030**). Added
+`scripts/clean.bat` (fresh DB, with confirmation).
+
+**Next: increment 6 = Forecast + Journal + reconciliation orchestration** (Milestone M2; `functional/05`/`06`,
+`04` §3.4/§3.5/§6/§7, `rules` §2–§11/§14, `technical/04` §3.2–§3.3) — **awaiting the user's go-ahead**; demo
+**D3** follows. **Agreed delivery (user, this session): 4 small sequential PRs** — **6a** Forecast read-only
+(hierarchy + 5-state badges, figures, treasury-timeline SVG, 3 scope variants sweep/carry/aggregated,
+read-only drill-down, states); **6b** Forecast inline `Prévu` edit + live recompute (recalc-matrix OOB
+fragments) + end-of-month transfer + the locked-month guard; **6c** Journal (quick-entry, whole-cell inline
+edit, sort/filter, transfer rows, atomic delete L8); **6d** reconciliation orchestration via the pure
+`engine.Reconcile`/`PairTransfer` (edit-in-place, no duplicate L6, variance→residual) + `label_mapping`
+autocomplete + `ui_preference` expand — **mandatory subagent review on the reconciliation path**, then
+close-out + D3. Open points **O-16** (no opening-balance column), **O-17** (snapshots-at-init for
+cascade-full), **O-18** (sweep start≈0 depends on the close increment's sweep txn); plus **O-19**: `e2e chrome
+smoke` is **flaky** (Chrome websocket-launch timeout; failed then passed on re-run on #24/#25 — worth
+hardening the launch/timeout); **O-20**: the increment-1 placeholder home shell (`home.html`) still uses inline
+`onclick` toggles that CSP blocks (theme/panel buttons inert) — superseded when 6a builds the real budget
+shell, fix there.
 (Increments 0–4 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
 lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; the sealed pure engine + reconciliation
 at 91.7 %; the full budget schema + `user_id`-scoped repos + fakes; and both configuration screens
