@@ -1,0 +1,25 @@
+# Normalise line endings: LF in the repository for all text (Go/CSS/JS/YAML/MD),
+# CRLF only for Windows batch files. Keeps gofumpt/CI (Linux, LF) deterministic
+# regardless of a contributor's core.autocrlf.
+* text=auto eol=lf
+
+*.go   text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.md   text eol=lf
+*.sql  text eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets (no EOL conversion, no diff).
+*.png  binary
+*.jpg  binary
+*.gif  binary
+*.ico  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.exe  binary

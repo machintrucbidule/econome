@@ -1,0 +1,51 @@
+# Build artefacts
+/econome
+/econome.exe
+/econome-admin
+/econome-admin.exe
+/dist/
+
+# Local runtime data (never commit the database, WAL/SHM, secret, or backups)
+/data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+secret.key
+/backups/
+
+# Local env overrides (only .env.example is committed)
+.env
+.env.local
+
+# Private design dossier — kept local only, NOT published to the public repo
+# (I-006). The application does not depend on it at runtime (the design system is
+# copied into web/assets/), so the app stays fully functional without it. The
+# resume protocol still reads these from the local working tree.
+/specifications/
+
+# Test / coverage / profiling output
+coverage.out
+coverage.html
+coverage.*
+*.test
+*.prof
+*.cpu
+*.mem
+
+# Go build / tooling artefacts (build cache lives in GOCACHE, outside the repo)
+/bin/
+__debug_bin*
+go.work
+go.work.sum
+vendor/
+
+# Runtime logs (the app logs to stdout; this only catches redirected/ad-hoc logs)
+*.log
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

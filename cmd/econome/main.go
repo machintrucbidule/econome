@@ -1,0 +1,84 @@
+// Command econome is the HTTP server entrypoint — the binary shipped in the
+// container image and built locally as econome.exe.
+//
+// At increment 0 it loads configuration, starts the (stub) server, logs
+// structured output to stdout, and shuts down gracefully on SIGINT/SIGTERM.
+// Migrations, auth, the middleware chain, and the screens are added by later
+// increments.
+package main
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"econome/internal/config"
+	"econome/internal/server"
+)
+
+// version is overridden at build time via -ldflags "-X main.version=vX.Y.Z"
+// (guardrails/04 §4); the binary reports the released version.
+var version = "dev"
+
+func main() {
+	if err := run(); err != nil {
+		slog.Error("econome: fatal", "err", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	initLogging(cfg.LogLevel)
+	slog.Info("econome starting", "version", version, "listen", cfg.Listen, "behind_tls", cfg.BehindTLS)
+
+	srv := server.New(cfg)
+
+	// Run the server until a termination signal, then shut down gracefully.
+	errCh := make(chan error, 1)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		slog.Info("econome shutting down")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return srv.Shutdown(shutdownCtx)
+	}
+}
+
+// initLogging configures structured JSON logging to stdout at the configured
+// level (technical/07 §8).
+func initLogging(level string) {
+	var lvl slog.Level
+	switch level {
+	case "debug":
+		lvl = slog.LevelDebug
+	case "warn":
+		lvl = slog.LevelWarn
+	case "error":
+		lvl = slog.LevelError
+	default:
+		lvl = slog.LevelInfo
+	}
+	h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: lvl})
+	slog.SetDefault(slog.New(h))
+}

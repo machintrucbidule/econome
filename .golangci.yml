@@ -1,0 +1,134 @@
+# golangci-lint v2 configuration — EconoMe (guardrails/01 §1.1 set, G2; layer
+# boundaries G4). The CI pins a v2 golangci-lint, so this uses the v2 schema.
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - staticcheck   # high-value correctness/bug suite (incl. gosimple/stylecheck in v2)
+    - govet         # stdlib vet
+    - errcheck      # no silently-dropped errors — load-bearing for a finance app
+    - revive        # configurable style (replaces golint)
+    - gocritic      # diagnostic/idiom checks
+    - ineffassign   # ineffective assignments
+    - unused        # dead code
+    - misspell      # typos in identifiers and English catalogs/keys
+    - gosec         # security static analysis (remotely-exposed finance app)
+    - exhaustive    # forces complete switch over the enum sets
+    - depguard      # enforces the inward-only layer boundaries (G4)
+
+  settings:
+    exhaustive:
+      # Treat a switch as exhaustive only when every enum case is present, even
+      # if a default clause exists — the calculation surface must enumerate the
+      # five envelope states, status, mode, flow_type, account.type,
+      # month_end_policy explicitly (guardrails/01 §1.1).
+      default-signifies-exhaustive: false
+      check:
+        - switch
+
+    misspell:
+      # No US/GB locale pin: the specs and code use British spelling
+      # ("behaviour", "localisation", "defence"); misspell's default still
+      # catches genuine typos without fighting the dialect.
+
+    depguard:
+      rules:
+        # --- The engine is PURE (technical/09, G4). It may import only the
+        # standard library and internal/domain. net/http and database/sql are
+        # stdlib but FORBIDDEN here, so this is a deny-list, not a $gostd allow.
+        engine-purity:
+          files:
+            - "**/internal/engine/**"
+          deny:
+            - pkg: econome/internal/repo
+              desc: "engine must stay pure — no persistence (G4)"
+            - pkg: econome/internal/services
+              desc: "engine must stay pure — no application layer (G4)"
+            - pkg: econome/internal/handlers
+              desc: "engine must not know transport (G4)"
+            - pkg: econome/internal/server
+              desc: "engine must not know transport (G4)"
+            - pkg: econome/internal/i18n
+              desc: "engine returns codes/minor units, never localises (G4)"
+            - pkg: econome/internal/view
+              desc: "engine returns codes/minor units, never formats (G4)"
+            - pkg: econome/internal/config
+              desc: "engine takes plain inputs, not runtime config (G4)"
+            - pkg: net/http
+              desc: "engine must not know HTTP (G4)"
+            - pkg: html/template
+              desc: "engine must not render (G4)"
+            - pkg: text/template
+              desc: "engine must not render (G4)"
+            - pkg: database/sql
+              desc: "engine must not touch persistence (G4)"
+            - pkg: modernc.org/sqlite
+              desc: "engine must not touch the DB driver (G4)"
+            - pkg: math/rand
+              desc: "engine is deterministic — no randomness (G4, technical/09 §2)"
+            - pkg: math/rand/v2
+              desc: "engine is deterministic — no randomness (G4)"
+            - pkg: golang.org/x/text
+              desc: "engine must not localise (G4)"
+          # NOTE: `time` is allowed (the engine uses time.Time as a value type),
+          # but `time.Now()` is forbidden by convention — the clock is the
+          # injected `today` parameter (technical/09 §2), enforced by review +
+          # the subagent pass, not by depguard (which guards packages, not funcs).
+
+        # --- Only internal/repo may import the SQLite driver / database/sql; no
+        # SQL leaks above it (G4). Applies to all internal/* except repo.
+        sql-only-in-repo:
+          files:
+            - "**/internal/**"
+            - "!**/internal/repo/**"
+          deny:
+            - pkg: modernc.org/sqlite
+              desc: "only internal/repo may import the SQLite driver (G4)"
+            - pkg: database/sql
+              desc: "SQL stays in internal/repo (G4)"
+
+        # --- Services own use-cases but never transport: no net/http, no
+        # templates (G4).
+        services-no-transport:
+          files:
+            - "**/internal/services/**"
+          deny:
+            - pkg: net/http
+              desc: "services must not know HTTP (G4)"
+            - pkg: html/template
+              desc: "services must not render (G4)"
+            - pkg: text/template
+              desc: "services must not render (G4)"
+            - pkg: econome/internal/handlers
+              desc: "services must not depend on handlers (inward-only, G4)"
+            - pkg: econome/internal/server
+              desc: "services must not depend on server (inward-only, G4)"
+
+  exclusions:
+    generated: lax
+    rules:
+      # Test files may use weak randomness and relaxed checks.
+      - path: _test\.go
+        linters:
+          - gosec
+
+formatters:
+  # gci only (import grouping: stdlib · third-party · local econome/…). gofumpt
+  # is NOT enabled as a golangci-lint formatter: its in-linter check
+  # false-positives on multi-group import blocks here (even `golangci-lint fmt`
+  # can't converge), while standalone gofumpt v0.9.x/0.10.x report the files
+  # clean. gofumpt formatting is enforced by its dedicated CI gate `gofumpt -l .`
+  # (guardrails/01 §1.1 "also a standalone gate") — so both guarantees hold
+  # without the buggy interaction.
+  enable:
+    - gci
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(econome)
