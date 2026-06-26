@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -181,6 +182,36 @@ func TestAuthGuardHTMXRedirect(t *testing.T) {
 	}
 	if resp.StatusCode != http.StatusUnauthorized || resp.Header.Get("HX-Redirect") != "/login" {
 		t.Fatalf("htmx unauth = %d HX-Redirect=%q, want 401 /login", resp.StatusCode, resp.Header.Get("HX-Redirect"))
+	}
+}
+
+// TestAuthStylesheetDefinesLayoutClasses guards against the regression where the
+// setup/login templates reference auth-layout classes (.authstage, .auth-card, …)
+// that were never ported from the mockup page styles into the shared econome.css,
+// leaving the first-run page unstyled. Every class the auth templates depend on
+// must be defined in the served stylesheet.
+func TestAuthStylesheetDefinesLayoutClasses(t *testing.T) {
+	ts, client := newTestServer(t)
+	resp, err := client.Get(ts.URL + "/assets/econome.css")
+	if err != nil {
+		t.Fatalf("GET econome.css: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("econome.css = %d, want 200", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read css: %v", err)
+	}
+	css := string(body)
+	for _, sel := range []string{
+		".authstage", ".authwrap", ".auth-card", ".brand", ".tagline",
+		".fld", ".pwrules", ".ferr", ".btn-block", ".errbox", ".warnbox",
+	} {
+		if !strings.Contains(css, sel) {
+			t.Errorf("econome.css missing auth-layout selector %q (auth pages would render unstyled)", sel)
+		}
 	}
 }
 
