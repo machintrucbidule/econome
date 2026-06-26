@@ -71,40 +71,9 @@
             <tr><td colspan="5" style="color:var(--muted);padding:18px">{{.T "forecast.empty.body"}}</td></tr>
           {{end}}
           {{range .Rows}}
-            {{if .IsParent}}
-              {{$pk := .Key}}
-              <tr class="tog" data-action="toggle-row" data-k="{{.Key}}">
-                <td><div class="nm"><button class="chev" type="button" tabindex="-1">›</button>{{.Name}}</div></td>
-                <td class="n">{{.PlannedStr}}</td>
-                <td class="n">{{.RealStr}}</td>
-                <td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>
-                <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span><span class="agg">{{$.T "forecast.agg"}}</span></td>
-              </tr>
-              {{range .Children}}
-                <tr class="child hidden" data-c="{{$pk}}">
-                  <td><div class="nm">{{.Name}}</div></td>
-                  <td class="n">{{.PlannedStr}}</td>
-                  <td class="n{{if .RealNeg}} neg{{end}}">{{.RealStr}}</td>
-                  <td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>
-                  <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span></td>
-                </tr>
-              {{end}}
-            {{else if .ShowPill}}
-              <tr>
-                <td><div class="nm">{{.Name}} <span class="pill-acc">{{.AccountName}}</span></div>{{if .HasBar}}<div class="bar"><i style="width:{{.BarPercent}}%;background:var(--{{.BarClass}})"></i></div>{{end}}</td>
-                <td class="n">{{.PlannedStr}}</td>
-                <td class="n{{if .RealNeg}} neg{{end}}{{if .Income}} pos{{end}}">{{.RealStr}}</td>
-                {{if .RemainDash}}<td class="n" style="color:var(--faint)">—</td>{{else}}<td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>{{end}}
-                <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span></td>
-              </tr>
-            {{else}}
-              <tr class="tog" data-action="toggle-row" data-k="{{.Key}}">
-                <td><div class="nm"><button class="chev" type="button" tabindex="-1">›</button>{{.Name}}</div>{{if .HasBar}}<div class="bar"><i style="width:{{.BarPercent}}%;background:var(--{{.BarClass}})"></i></div>{{end}}</td>
-                <td class="n">{{.PlannedStr}}</td>
-                <td class="n{{if .RealNeg}} neg{{end}}{{if .Income}} pos{{end}}">{{.RealStr}}</td>
-                {{if .RemainDash}}<td class="n" style="color:var(--faint)">—</td>{{else}}<td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>{{end}}
-                <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span></td>
-              </tr>
+            {{template "fc-row" .}}
+            {{if eq .Kind "parent"}}{{range .Children}}{{template "fc-row" .}}{{end}}{{end}}
+            {{if .HasDrill}}
               <tr class="drill hidden" data-d="{{.Key}}">
                 <td colspan="5"><div class="di">
                   <div class="dh"><span>{{if .Drill}}{{$.T "forecast.drill.title"}}{{else}}{{$.T "forecast.drill.empty"}}{{end}}</span><a class="jlink" href="/journal?period={{$.Period}}&scope={{$.Scope}}">{{$.T "forecast.drill.open"}}</a></div>
@@ -114,18 +83,12 @@
             {{end}}
           {{end}}
           </tbody>
-          <tfoot><tr><td>{{.T "forecast.total"}}</td><td class="n">{{.Total.PlannedStr}}</td><td class="n">{{.Total.RealStr}}</td><td class="n{{if .Total.RemainNeg}} neg{{end}}">{{.Total.RemainStr}}</td><td></td></tr></tfoot>
+          <tfoot>{{template "fc-total" .}}</tfoot>
         </table>
 
         {{if .HasHiddenTransfers}}<div style="color:var(--faint);font-size:12.5px;margin:-6px 2px 14px">↳ {{.T "forecast.hidden_transfers"}}</div>{{end}}
 
-        {{if .TimelineSVG}}
-        <div class="tl">
-          <div class="t">{{.TimelineTitle}}</div>
-          {{.TimelineSVG}}
-          <div class="leg">{{range .TimelineLegend}}<span><span class="sw" style="{{if .Hollow}}border:2px solid {{.Color}};background:var(--surface){{else}}background:{{.Color}}{{end}}"></span>{{.Label}}</span>{{end}}</div>
-        </div>
-        {{end}}
+        {{template "fc-timeline" .}}
       {{end}}
     </div>
   </main>
@@ -133,29 +96,8 @@
   <aside class="right" id="rightpanel">
     {{if not .NotCreated}}
     <section>
-      <div class="figs">
-        {{range .Figures}}
-          <div class="fig{{if .Mod}} {{.Mod}}{{end}}"><div class="l">{{.Label}}{{if .Help}} <span class="help" tabindex="0" data-tip="{{.Help}}">?</span>{{end}}</div><div class="v">{{.Value}}</div>{{if .Sub}}<div class="s">{{.Sub}}</div>{{end}}</div>
-        {{end}}
-      </div>
-
-      {{range .Encarts}}
-        {{if eq .Kind "negative"}}
-          <div class="save danger"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div><button type="button" disabled>{{$.T "forecast.save.transfer"}}</button></div>
-        {{else if eq .Kind "cascade"}}
-          <div class="save full"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div><a class="savebtn" href="/config/parameters">{{.ActionLabel}}</a></div>
-        {{else}}
-          <div class="save"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div><button type="button" disabled>{{.ActionLabel}}</button></div>
-        {{end}}
-      {{end}}
-
-      {{if .CarryNote}}<div class="note"><b>{{.T "forecast.carry.title"}}</b><br>{{.T "forecast.carry.body"}}</div>{{end}}
-
-      {{if .HasWatch}}
-        <div class="watch"><div class="l">{{.T "forecast.watch.title"}}</div>
-          {{range .Watch}}<div class="wr"><span>{{.Label}}</span><b{{if .Bad}} style="color:var(--bad)"{{end}}>{{.ValueStr}}</b></div>{{end}}
-        </div>
-      {{end}}
+      {{template "fc-figures" .}}
+      {{template "fc-panel" .}}
     </section>
     {{end}}
   </aside>
@@ -165,3 +107,71 @@
 {{template "appscripts" .}}
 </body>
 </html>{{end}}
+
+
+{{/* One table row (leaf / child / parent / aggregated-flat). Receives an FRow. */}}
+{{define "fc-row"}}
+<tr id="fc-row-{{.Key}}"
+  {{- if .OOB}} hx-swap-oob="outerHTML"{{end}}
+  {{- if eq .Kind "parent"}} class="tog" data-action="toggle-row" data-k="{{.Key}}"
+  {{- else if eq .Kind "leaf"}} class="tog" data-action="toggle-row" data-k="{{.Key}}"
+  {{- else if eq .Kind "child"}} class="child{{if .Hidden}} hidden{{end}}" data-c="{{.ParentKey}}"
+  {{- end}}>
+  <td>
+    <div class="nm">{{if or (eq .Kind "parent") (eq .Kind "leaf")}}<button class="chev" type="button" tabindex="-1">›</button>{{end}}{{.Name}}{{if .ShowPill}} <span class="pill-acc">{{.AccountName}}</span>{{end}}</div>
+    {{if .HasBar}}<div class="bar"><i style="width:{{.BarPercent}}%;background:var(--{{.BarClass}})"></i></div>{{end}}
+  </td>
+  {{if .Editable}}
+    <td class="n"><input class="amt-inp" name="planned" value="{{.PlannedStr}}" inputmode="decimal" autocomplete="off"
+      hx-patch="/allocations/{{.EnvID}}?period={{.Period}}&scope={{.Scope}}" hx-trigger="change" hx-target="#fc-row-{{.Key}}" hx-swap="outerHTML" hx-include="this"></td>
+  {{else}}
+    <td class="n">{{.PlannedStr}}</td>
+  {{end}}
+  <td class="n{{if .RealNeg}} neg{{end}}{{if .Income}} pos{{end}}">{{.RealStr}}</td>
+  {{if .RemainDash}}<td class="n" style="color:var(--faint)">—</td>{{else}}<td class="n{{if .RemainNeg}} neg{{end}}">{{.RemainStr}}</td>{{end}}
+  <td><span class="pill {{.BadgeClass}}">{{.BadgeLabel}}</span>{{if .AggBadge}}<span class="agg">{{.AggLabel}}</span>{{end}}</td>
+</tr>
+{{end}}
+
+
+{{/* Footer total (expense only). Receives the ForecastView. */}}
+{{define "fc-total"}}<tr id="fc-total"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}><td>{{.T "forecast.total"}}</td><td class="n">{{.Total.PlannedStr}}</td><td class="n">{{.Total.RealStr}}</td><td class="n{{if .Total.RemainNeg}} neg{{end}}">{{.Total.RemainStr}}</td><td></td></tr>{{end}}
+
+
+{{/* Right-panel figures. Receives the ForecastView. */}}
+{{define "fc-figures"}}<div id="fc-figures"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  <div class="figs">
+    {{range .Figures}}<div class="fig{{if .Mod}} {{.Mod}}{{end}}"><div class="l">{{.Label}}{{if .Help}} <span class="help" tabindex="0" data-tip="{{.Help}}">?</span>{{end}}</div><div class="v">{{.Value}}</div>{{if .Sub}}<div class="s">{{.Sub}}</div>{{end}}</div>{{end}}
+  </div>
+</div>{{end}}
+
+
+{{/* Right-panel savings encart(s) + carry note + à surveiller. Receives the ForecastView. */}}
+{{define "fc-panel"}}<div id="fc-panel"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  {{range .Encarts}}
+    {{if eq .Kind "negative"}}
+      <div class="save danger"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div><button type="button" disabled>{{.ActionLabel}}</button></div>
+    {{else if eq .Kind "cascade"}}
+      <div class="save full"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div><a class="savebtn" href="/config/parameters">{{.ActionLabel}}</a></div>
+    {{else}}
+      <div class="save"><div class="l">{{.Title}}</div><div class="big">{{.BigStr}}</div><div class="s">{{.Sub}}</div>
+        <button type="button" {{if .Disabled}}disabled{{else}}hx-post="/transfers/end-of-month?period={{$.Period}}&scope={{$.Scope}}&account={{.SweepID}}" hx-target="#fc-panel" hx-swap="outerHTML"{{end}}>{{.ActionLabel}}</button></div>
+    {{end}}
+  {{end}}
+  {{if .CarryNote}}<div class="note"><b>{{.T "forecast.carry.title"}}</b><br>{{.T "forecast.carry.body"}}</div>{{end}}
+  {{if .HasWatch}}
+    <div class="watch"><div class="l">{{.T "forecast.watch.title"}}</div>
+      {{range .Watch}}<div class="wr"><span>{{.Label}}</span><b{{if .Bad}} style="color:var(--bad)"{{end}}>{{.ValueStr}}</b></div>{{end}}
+    </div>
+  {{end}}
+</div>{{end}}
+
+
+{{/* Treasury timeline. Receives the ForecastView. */}}
+{{define "fc-timeline"}}<div id="fc-timeline"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  {{if .TimelineSVG}}<div class="tl">
+    <div class="t">{{.TimelineTitle}}</div>
+    {{.TimelineSVG}}
+    <div class="leg">{{range .TimelineLegend}}<span><span class="sw" style="{{if .Hollow}}border:2px solid {{.Color}};background:var(--surface){{else}}background:{{.Color}}{{end}}"></span>{{.Label}}</span>{{end}}</div>
+  </div>{{end}}
+</div>{{end}}

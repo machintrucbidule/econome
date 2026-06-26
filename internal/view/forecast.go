@@ -30,13 +30,16 @@ type FTxn struct {
 	StatusLabel string
 }
 
-// FRow is one rendered table row (leaf or rolled-up parent).
+// FRow is one rendered table row. Kind ∈ parent | child | leaf | flat (flat =
+// the aggregated-scope flat leaf with an account pill).
 type FRow struct {
-	Key         string
+	Kind        string
+	Key         string // "e<envID>" (leaf/child/flat) · "c<catID>" (parent)
+	EnvID       int64
+	ParentKey   string // child rows: the parent's Key (for data-c)
 	Name        string
 	AccountName string
 	ShowPill    bool
-	IsParent    bool
 	AggBadge    bool
 	Income      bool
 	PlannedStr  string
@@ -47,12 +50,20 @@ type FRow struct {
 	RemainDash  bool // income rows show "—" for remaining
 	BadgeClass  string
 	BadgeLabel  string
+	AggLabel    string
 	HasBar      bool
 	BarPercent  int
 	BarClass    string
 	Children    []FRow
 	Drill       []FTxn
 	HasDrill    bool
+
+	// interaction / fragment plumbing (6b)
+	Editable bool   // the Prévu cell is an inline input (active month, leaf/child)
+	Period   string // for the hx-patch URL
+	Scope    string
+	Hidden   bool // a child row is collapsed by default
+	OOB      bool // render with hx-swap-oob (out-of-band fragment)
 }
 
 // FTotal is the footer total (expense only).
@@ -80,6 +91,8 @@ type FEncart struct {
 	Sub         string
 	AccountName string
 	ActionLabel string
+	SweepID     int64 // the sweep account the "Virer" action posts for
+	Disabled    bool  // the end-of-month transfer cannot run (to_save ≤ 0 / locked)
 }
 
 // FWatch is one "à surveiller" item.
@@ -112,6 +125,8 @@ type ForecastView struct {
 	NotCreated bool
 	Locked     bool
 	Empty      bool
+	Editable   bool // active month → inline edits enabled
+	OOB        bool // render the panel/total fragments out-of-band (PATCH response)
 
 	Rows               []FRow
 	ShowPills          bool

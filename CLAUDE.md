@@ -140,15 +140,24 @@ latent increment-5 sign bug (**I-031**): internal-transfer txns are now stored s
 engine's balances/timeline/carry-funding figure are correct. Independent spec review of the read-model + sign
 fix: **no correctness bugs**. See `docs/progress/0006-budget-core.md`.
 
-**Next: 6b** — Forecast inline `Prévu` edit + live recompute (recalc-matrix OOB fragments) + end-of-month
-transfer (the "Virer" button renders **disabled** in 6a) + the locked-month edit guard. Then **6c** Journal
-(quick-entry, whole-cell inline edit, sort/filter, transfer rows, atomic delete L8); **6d** reconciliation
-orchestration via the pure `engine.Reconcile`/`PairTransfer` (edit-in-place, no duplicate L6,
-variance→residual) + `label_mapping` autocomplete + `ui_preference` expand — **mandatory subagent review on
-the reconciliation path**, then close-out + D3. Open points **O-16** (no opening-balance column), **O-17**
-(snapshots-at-init for cascade-full), **O-18** (sweep start≈0 depends on the close increment's sweep txn),
-**O-19** `e2e chrome smoke` flaky (Chrome websocket-launch timeout), **O-21** (savings accounts not yet listed
-in the forecast rail — deferred to inc 7 so the Patrimoine link has a destination).
+**6b (Forecast inline edit) — DONE** (all gates green; awaiting go-ahead before 6c). The forecast is now
+interactive: the inline `Prévu` edit (`PATCH /allocations/{env}`, envelope-keyed upsert **I-032**) with live
+server-side recompute (the screen is decomposed into id-stable OOB fragments — `fc-row`/`fc-total`/
+`fc-figures`/`fc-panel`/`fc-timeline`; a PATCH returns the edited row + OOB parent/total/panel/figures per the
+recalc matrix, figures included for the §4a residual-negative → red Point bas coupling, timeline correctly
+omitted); the "Virer en fin de mois" sweep (`POST /transfers/end-of-month` → a cleared sweep→cascade-target
+transfer of `to_save`, source-signed negative I-031, disabled when to_save≤0/cascade-full/locked); and the
+locked-month guard on every mutation via `ensureEditable` (→409). See `docs/progress/0006-budget-core.md` (6b).
+
+**Next: 6c** Journal (quick-entry, whole-cell inline edit, sort/filter, transfer rows, atomic delete L8;
+`functional/06`, `04` §3.5, `technical/04` §3.3). Then **6d** reconciliation orchestration via the pure
+`engine.Reconcile`/`PairTransfer` (edit-in-place, no duplicate L6, variance→residual) + `label_mapping`
+autocomplete + `ui_preference` expand — **mandatory subagent review on the reconciliation path**, then
+close-out + D3. Open points **O-16** (no opening-balance column), **O-17** (snapshots-at-init for
+cascade-full), **O-18** (sweep start≈0 depends on the close increment's sweep txn — the 6b "Virer" is the
+manual sweep; inc 8's close reuses it), **O-19** `e2e chrome smoke` flaky, **O-21** (savings accounts not yet
+in the forecast rail — deferred to inc 7), **O-22** (inline `Prévu` edit is per-account scope only; aggregated
+rows read-only).
 (Increments 0–4 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
 lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; the sealed pure engine + reconciliation
 at 91.7 %; the full budget schema + `user_id`-scoped repos + fakes; and both configuration screens
