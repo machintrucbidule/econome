@@ -105,12 +105,16 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 0 (environment & repository setup) — DONE.** Scaffold, tooling, CI, and context artefacts
-created and verified; repo published (public) at https://github.com/machintrucbidule/econome with
-`main` protected and CI green; Go pinned 1.26.4. Decisions I-001..I-007. See
-`docs/progress/0000-increment-0.md`. **Next: increment 1 = walking skeleton**
-(`development-plan/02-walking-skeleton.md`) — awaiting the user's go-ahead. Note: `main` is protected, so
-all further changes land via **PR** (branch → CI green → merge).
+**Increment 1 (walking skeleton) — DONE** (PRs #5/#6/#7 merged; CI green; subagent reviews passed).
+End-to-end slice live: owner setup → login → empty three-pane shell → logout, `/healthz`, lockout, CSRF,
+sessions, migrations-with-backup, vendored htmx, `money.go` rendered as `−635,00 €`. Decisions I-001..I-013.
+See `docs/progress/0001-walking-skeleton.md`. **Next: increment 2 = engine + reconciliation (full
+coverage)** (`development-plan/01-phased-plan.md`) — awaiting the user's go-ahead.
+
+> Reminders: `main` is protected (all changes via PR → CI green → merge); Dependabot minor/patch auto-merge
+> on green, majors manual (I-008). Local-dev: add `C:\Program Files\Go\bin` + `%USERPROFILE%\go\bin` to PATH;
+> `go test -race` needs cgo (runs in CI on Linux), so locally use `go test ./...`. Open: `chromedp` smoke
+> deferred (O-7, needs CI Chrome).
 
 > **Repo note (I-006).** The published GitHub repo is **public** but `specifications/` is **gitignored**
 > (local-only) — the design dossier + decision logs are not pushed. They remain on this working tree, so
