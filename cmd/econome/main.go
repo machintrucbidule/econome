@@ -10,15 +10,19 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"econome/internal/config"
+	"econome/internal/repo"
 	"econome/internal/server"
+	"econome/migrations"
 )
 
 // version is overridden at build time via -ldflags "-X main.version=vX.Y.Z"
@@ -40,6 +44,26 @@ func run() error {
 
 	initLogging(cfg.LogLevel)
 	slog.Info("econome starting", "version", version, "listen", cfg.Listen, "behind_tls", cfg.BehindTLS)
+
+	// Data volume must be writable; the session secret lives on it (technical/07 §4).
+	if err := cfg.EnsureDataDir(); err != nil {
+		return err
+	}
+	if _, err := cfg.EnsureSecret(); err != nil {
+		return err
+	}
+
+	// Open the database and apply pending migrations (with a pre-migration
+	// backup, aborting on failure) before serving (technical/08 §1–§2).
+	db, err := repo.Open(filepath.Join(cfg.DataDir, "econome.db"))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = db.Close() }()
+	if err := repo.Migrate(context.Background(), db, migrations.FS, filepath.Join(cfg.DataDir, "backups")); err != nil {
+		return fmt.Errorf("econome: migrations: %w", err)
+	}
+	slog.Info("database ready")
 
 	srv := server.New(cfg)
 
