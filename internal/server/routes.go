@@ -18,7 +18,7 @@ import (
 // New builds the HTTP server: the static asset handler, the public chain
 // (setup/login), and the protected chain (shell/logout) — the full middleware
 // order Recover → SecurityHeaders → RequestContext → Session → SetupGuard →
-// [AuthGuard → TenantContext] → Locale → CSRF (technical/04 §2, I-002 ServeMux).
+// [AuthGuard → TenantContext] → CSRF → Locale (technical/04 §2, I-002 ServeMux).
 func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Server {
 	h := handlers.New(svc, rdr, cfg.BehindTLS, cfg.TrustedProxy)
 	secret := svc.Secret()
@@ -32,9 +32,9 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 		middleware.SetupGuard(svc),
 	}
 	public := middleware.Chain(append(append([]middleware.Middleware{}, common...),
-		middleware.Locale, middleware.CSRF(secret, cfg.BehindTLS))...)
+		middleware.CSRF(secret, cfg.BehindTLS), middleware.Locale)...)
 	protected := middleware.Chain(append(append([]middleware.Middleware{}, common...),
-		middleware.AuthGuard, middleware.TenantContext(svc), middleware.Locale, middleware.CSRF(secret, cfg.BehindTLS))...)
+		middleware.AuthGuard, middleware.TenantContext(svc), middleware.CSRF(secret, cfg.BehindTLS), middleware.Locale)...)
 
 	// Static assets bypass the auth chain (Recover + security headers only).
 	assetChain := middleware.Chain(middleware.Recover, middleware.SecurityHeaders(cfg.BehindTLS))

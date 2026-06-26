@@ -20,6 +20,19 @@ const (
 // field was wrong or whether the email exists — technical/05 §6).
 var ErrInvalidCredentials = errors.New("services: invalid credentials")
 
+// decoyHash is a fixed Argon2id hash verified against the login password when no
+// user matches the email, so a not-found login costs the same time as a real
+// verify (anti-enumeration, technical/05 §6). The decoy password is not a secret.
+var decoyHash = mustHash("econome-timing-equaliser-decoy")
+
+func mustHash(pw string) string {
+	h, err := auth.HashPassword(pw)
+	if err != nil {
+		panic("services: decoy hash: " + err.Error())
+	}
+	return h
+}
+
 // LockedError signals that the account or IP is temporarily throttled.
 type LockedError struct{ RetryAfter time.Duration }
 
@@ -156,6 +169,10 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthResult, error)
 
 	user, err := s.users.GetByEmail(ctx, s.tx.DB(), in.Email)
 	if errors.Is(err, domain.ErrNotFound) {
+		// Equalise timing against a known-email path so the response time does
+		// not reveal whether the address exists (technical/05 §6 — no user
+		// enumeration). Run a dummy Argon2id verify with the default parameters.
+		_, _, _ = auth.VerifyPassword(decoyHash, in.Password)
 		return nil, ErrInvalidCredentials
 	}
 	if err != nil {
