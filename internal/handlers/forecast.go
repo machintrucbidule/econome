@@ -165,6 +165,7 @@ func (h *Handlers) forecastView(r *http.Request, d *services.ForecastData) view.
 		Scope:      d.Scope,
 		ScopeKind:  d.ScopeKind,
 		Scopes:     h.forecastScopes(base, d),
+		Savings:    h.railSavings(r, base),
 		NotCreated: !d.Exists,
 		Locked:     d.Locked,
 		Empty:      d.Empty,
@@ -232,10 +233,11 @@ func (h *Handlers) forecastRow(base view.Base, row services.ForecastRow, editabl
 		RealStr:     base.Amount(row.Real),
 		Period:      period,
 		Scope:       scope,
-		// The Prévu cell is an inline input only on an active month, for a
-		// posting leaf/child (a parent shows its read-only rollup sum); the
-		// aggregated flat row stays read-only (the overview, not the edit surface).
-		Editable: editable && (kind == "leaf"),
+		// The Prévu cell is an inline input on an active month for a posting
+		// leaf/child OR an aggregated flat row (O-22 resolved: each flat row maps
+		// to one envelope, so it edits that allocation); a parent shows its
+		// read-only rollup sum.
+		Editable: editable && (kind == "leaf" || kind == "flat"),
 		Open:     row.Open,
 	}
 	if row.IsParent {

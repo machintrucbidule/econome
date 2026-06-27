@@ -28,12 +28,14 @@ type SnapshotRepo interface {
 	Upsert(ctx context.Context, q DBTX, s *domain.Snapshot) error
 	ByAccountPeriod(ctx context.Context, q DBTX, userID, accountID int64, period string) (*domain.Snapshot, error)
 	ListByPeriod(ctx context.Context, q DBTX, userID int64, period string) ([]domain.Snapshot, error)
+	ListByUser(ctx context.Context, q DBTX, userID int64) ([]domain.Snapshot, error)
 	Delete(ctx context.Context, q DBTX, userID, id int64) error
 }
 
 // NetworthMonthRepo persists the per-month comment.
 type NetworthMonthRepo interface {
 	Get(ctx context.Context, q DBTX, userID int64, period string) (*domain.NetworthMonth, error)
+	ListByUser(ctx context.Context, q DBTX, userID int64) ([]domain.NetworthMonth, error)
 	Upsert(ctx context.Context, q DBTX, userID int64, period, comment string) error
 }
 
@@ -165,6 +167,25 @@ func (snapshotRepo) ListByPeriod(ctx context.Context, q DBTX, userID int64, peri
 	return out, rows.Err()
 }
 
+func (snapshotRepo) ListByUser(ctx context.Context, q DBTX, userID int64) ([]domain.Snapshot, error) {
+	rows, err := q.QueryContext(ctx,
+		`SELECT id, user_id, account_id, period, gross_value, created_at, updated_at FROM savings_snapshot
+		 WHERE user_id = ? ORDER BY period, id`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repo: list snapshots by user: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.Snapshot
+	for rows.Next() {
+		s, err := scanSnapshot(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *s)
+	}
+	return out, rows.Err()
+}
+
 func (snapshotRepo) Delete(ctx context.Context, q DBTX, userID, id int64) error {
 	res, err := q.ExecContext(ctx, `DELETE FROM savings_snapshot WHERE user_id = ? AND id = ?`, userID, id)
 	if err != nil {
@@ -217,6 +238,34 @@ func (networthMonthRepo) Get(ctx context.Context, q DBTX, userID int64, period s
 		return nil, err
 	}
 	return &m, nil
+}
+
+func (networthMonthRepo) ListByUser(ctx context.Context, q DBTX, userID int64) ([]domain.NetworthMonth, error) {
+	rows, err := q.QueryContext(ctx,
+		`SELECT id, user_id, period, comment, created_at, updated_at FROM networth_month WHERE user_id = ? ORDER BY period`,
+		userID)
+	if err != nil {
+		return nil, fmt.Errorf("repo: list networth_month by user: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.NetworthMonth
+	for rows.Next() {
+		var (
+			m                    domain.NetworthMonth
+			createdAt, updatedAt string
+		)
+		if err := rows.Scan(&m.ID, &m.UserID, &m.Period, &m.Comment, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("repo: scan networth_month: %w", err)
+		}
+		if m.CreatedAt, err = parseTime(createdAt); err != nil {
+			return nil, err
+		}
+		if m.UpdatedAt, err = parseTime(updatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
 }
 
 func (networthMonthRepo) Upsert(ctx context.Context, q DBTX, userID int64, period, comment string) error {

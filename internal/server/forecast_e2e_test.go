@@ -237,4 +237,12 @@ func TestForecastScopeCarryAndAggregated(t *testing.T) {
 	if !strings.Contains(agg, "pill-acc") {
 		t.Error("aggregated rows should carry account pills")
 	}
+	// O-22: the aggregated flat rows are now inline-editable (each maps to one
+	// envelope), so the Prévu cell renders an amount input wired to PATCH.
+	if !strings.Contains(agg, `class="amt-inp" name="planned"`) {
+		t.Error("aggregated scope should expose an editable Prévu input (O-22)")
+	}
+	if !strings.Contains(agg, "hx-patch=\"/allocations/") {
+		t.Error("aggregated Prévu input should hx-patch the allocation (O-22)")
+	}
 }

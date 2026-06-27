@@ -1,0 +1,85 @@
+{{define "register"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "head" .}}<title>{{.T "register.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="app no-right" hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
+
+  {{template "nw-rail" .}}
+
+  <main class="center">
+    <header class="head">
+      <button class="iconbtn btn-left" type="button" data-action="nav-left" title="{{.T "shell.collapse_rail"}}">☰</button>
+      <h1>{{.T "networth.title"}}</h1>
+      <div class="mnav">
+        <a class="iconbtn" href="/register?period={{.PrevPeriod}}">‹</a>
+        <button class="m" type="button" data-action="toggle-picker">{{.MonthLabel}}</button>
+        <a class="iconbtn" href="/register?period={{.NextPeriod}}">›</a>
+        <div class="mp{{if .PickerOpen}} open{{end}}" id="mp">
+          <div class="mp-y">
+            <button type="button" data-action="goto" data-href="/register?period={{.PrevYearPeriod}}&pick=1">‹</button>
+            <span>{{.YearLabel}}</span>
+            <button type="button" data-action="goto" data-href="/register?period={{.NextYearPeriod}}&pick=1">›</button>
+          </div>
+          <div class="mp-g">{{range .MonthCells}}<button type="button" data-action="goto" data-href="/register?period={{.Period}}"{{if .On}} class="cur"{{end}}>{{.Label}}</button>{{end}}</div>
+        </div>
+      </div>
+      <div class="sp"></div>
+      <div class="tabs"><a href="/networth?period={{.Period}}">{{.T "networth.tab.synthese"}}</a><a class="on" href="/register?period={{.Period}}">{{.T "networth.tab.register"}}</a></div>
+    </header>
+
+    <div class="cbody">
+      {{if not .HasHistory}}
+        <section class="empty">
+          <h3>{{.T "register.empty.title"}}</h3>
+          <p>{{.T "register.empty.body"}}</p>
+          <a class="btn primary" href="/networth?period={{.Period}}">{{.T "register.empty.action"}}</a>
+        </section>
+      {{else}}
+        <div style="color:var(--muted);font-size:13px;margin-bottom:12px">{{.T "register.intro"}} <a class="jlink" href="/networth?period={{.Period}}">{{.T "networth.tab.synthese"}}</a>.</div>
+
+        {{template "nw-chart" .}}
+
+        <table class="rtable">
+          <colgroup><col style="width:120px"><col style="width:140px"><col style="width:140px"><col style="width:150px"><col style="width:130px"><col class="cmtcol"></colgroup>
+          <thead><tr>
+            <th>{{.T "register.col.month"}}</th><th class="n">{{.T "register.col.livrets"}}</th><th class="n">{{.T "register.col.pea"}}</th><th class="n">{{.T "register.col.total"}}</th><th class="n">{{.T "register.col.delta"}}</th><th class="cmt">{{.T "register.col.comment"}}</th>
+          </tr></thead>
+          <tbody id="rbody" data-csrf="{{.CSRF}}">
+            {{range .Rows}}
+            <tr{{if .Current}} class="cur"{{end}}>
+              <td>{{.MonthLabel}}</td>
+              <td class="n">{{.LivretsStr}}</td>
+              <td class="n">{{.PEAStr}}</td>
+              <td class="n">{{.TotalStr}}</td>
+              <td class="n{{if .DeltaDash}} nul2{{else if .DeltaPos}} pos2{{else if .DeltaNeg}} neg2{{else}} nul2{{end}}">{{.DeltaStr}}</td>
+              <td class="cmt e fill" data-action="nw-comment" data-period="{{.Period}}" tabindex="0"><span class="ct{{if not .CommentSet}} ph{{end}}">{{if .CommentSet}}{{.Comment}}{{else}}—{{end}}</span></td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+        <div class="rfoot">{{.FooterStr}}</div>
+      {{end}}
+    </div>
+  </main>
+
+  <div class="scrim" data-action="close-drawers"></div>
+</div>
+<div id="tt"></div>
+{{template "appscripts" .}}
+</body>
+</html>{{end}}
+
+
+{{/* Evolution curve block (range seg + SVG + legend). Receives the RegisterView. */}}
+{{define "nw-chart"}}<div class="tl" id="nw-chart" style="margin-bottom:18px"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  <div class="thead">
+    <div class="t">{{.T "register.chart.title"}}</div>
+    <span class="seg rangeseg">
+      <button type="button"{{if eq .Range "all"}} class="on"{{end}} hx-get="/register/chart?range=all&period={{.Period}}" hx-target="#nw-chart" hx-swap="outerHTML">{{.T "register.range.all"}}</button>
+      <button type="button"{{if eq .Range "12"}} class="on"{{end}} hx-get="/register/chart?range=12&period={{.Period}}" hx-target="#nw-chart" hx-swap="outerHTML">{{.T "register.range.12"}}</button>
+      <button type="button"{{if eq .Range "6"}} class="on"{{end}} hx-get="/register/chart?range=6&period={{.Period}}" hx-target="#nw-chart" hx-swap="outerHTML">{{.T "register.range.6"}}</button>
+    </span>
+  </div>
+  {{.ChartSVG}}
+  <div class="leg">{{range .Legend}}<span><span class="sw" style="background:{{.Color}}"></span>{{.Label}}</span>{{end}}</div>
+</div>{{end}}

@@ -213,6 +213,62 @@
     }
   }
 
+  /* ---- Net worth (Patrimoine, increment 7) — whole-cell snapshot edit
+     (Synthèse) + inline comment edit (Registre). Snapshots upsert by natural
+     identity (account, period); an emptied value deletes the snapshot (L7). ---- */
+  function nwEdit(cell) {
+    var span = cell.querySelector(".vt");
+    if (!span || cell.querySelector("input")) return;
+    var old = span.textContent;
+    var inp = document.createElement("input"); inp.className = "amt-inp"; inp.value = old.replace(/\s/g, " ");
+    cell.replaceChild(inp, span); inp.focus(); inp.select();
+    var closed = false;
+    var done = function (commit) {
+      if (closed) return; closed = true;
+      // On commit, the htmx swap replaces the whole table; if nothing was sent
+      // (empty value — deletion is the explicit ✕), restore the original span.
+      if (!commit || !nwSave(cell, inp.value)) { if (inp.parentNode) cell.replaceChild(span, inp); }
+    };
+    inp.addEventListener("blur", function () { done(true); });
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+      else if (e.key === "Escape") { done(false); }
+    });
+  }
+  function nwSave(cell, raw) {
+    if (raw.trim() === "") return false; // empty → revert; deletion is via the ✕ button
+    var tbl = document.getElementById("nw-table"); if (!tbl || !window.htmx) return false;
+    var csrf = tbl.getAttribute("data-csrf");
+    var acct = cell.getAttribute("data-account"), period = cell.getAttribute("data-period");
+    window.htmx.ajax("POST", "/snapshots",
+      { values: { account_id: acct, period: period, gross_value: raw, _csrf: csrf }, target: "#nw-table", swap: "outerHTML" });
+    return true;
+  }
+  function nwComment(cell) {
+    var span = cell.querySelector(".ct");
+    if (!span || cell.querySelector("input")) return;
+    var rbody = document.getElementById("rbody");
+    var csrf = rbody ? rbody.getAttribute("data-csrf") : "";
+    var period = cell.getAttribute("data-period");
+    var old = span.classList.contains("ph") ? "" : span.textContent;
+    var inp = document.createElement("input"); inp.className = "lbl-inp"; inp.value = old;
+    cell.replaceChild(inp, span); inp.focus(); inp.select();
+    var closed = false;
+    var done = function (commit) {
+      if (closed) return; closed = true;
+      var v = inp.value.trim();
+      var t = document.createElement("span"); t.className = "ct" + (v ? "" : " ph"); t.textContent = v || "—";
+      if (inp.parentNode) cell.replaceChild(t, inp);
+      if (commit && window.htmx) window.htmx.ajax("PUT", "/networth/" + period + "/comment",
+        { values: { comment: inp.value, _csrf: csrf }, swap: "none" });
+    };
+    inp.addEventListener("blur", function () { done(true); });
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+      else if (e.key === "Escape") { done(false); }
+    });
+  }
+
   /* delegated click handling (CSP-clean) */
   document.addEventListener("click", function (e) {
     if (e.target.closest(".em-menu,.em-cal,.em-mp,.em-auto,input")) return; // let widgets/inline inputs handle their own clicks
@@ -222,6 +278,8 @@
     if (action === "j-pick") { jPick(el); return; }
     if (action === "j-edit") { jEdit(el); return; }
     if (action === "j-sort") { jSort(el); return; }
+    if (action === "nw-edit") { nwEdit(el); return; }
+    if (action === "nw-comment") { nwComment(el); return; }
     if (action === "close-drawers") { if (window.closeDrawers) window.closeDrawers(); return; }
     if (action === "theme-toggle") {
       var html = document.documentElement;
@@ -271,12 +329,14 @@
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Enter" && e.key !== " ") return;
     if (e.target.closest("input,.em-menu,.em-cal,.em-mp")) return;
-    var el = e.target.closest('[data-action="j-edit"],[data-action="j-sort"],[data-action="toggle-row"]');
+    var el = e.target.closest('[data-action="j-edit"],[data-action="j-sort"],[data-action="toggle-row"],[data-action="nw-edit"],[data-action="nw-comment"]');
     if (!el) return;
     e.preventDefault();
     var act = el.getAttribute("data-action");
     if (act === "j-sort") jSort(el);
     else if (act === "toggle-row") toggleForecastRow(el);
+    else if (act === "nw-edit") nwEdit(el);
+    else if (act === "nw-comment") nwComment(el);
     else jEdit(el);
   });
 
