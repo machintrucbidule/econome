@@ -236,9 +236,13 @@ func (h *Handlers) forecastRow(base view.Base, row services.ForecastRow, editabl
 		// posting leaf/child (a parent shows its read-only rollup sum); the
 		// aggregated flat row stays read-only (the overview, not the edit surface).
 		Editable: editable && (kind == "leaf"),
+		Open:     row.Open,
 	}
 	if row.IsParent {
 		r.AggLabel = base.T("forecast.agg")
+		r.NodeType, r.NodeID = "category", row.CategoryID
+	} else {
+		r.NodeType, r.NodeID = "envelope", row.EnvelopeID
 	}
 	class, label := badgeFor(base, row)
 	r.BadgeClass, r.BadgeLabel = class, label
@@ -262,7 +266,7 @@ func (h *Handlers) forecastRow(base view.Base, row services.ForecastRow, editabl
 		cr := h.forecastRow(base, ch, editable, period, scope)
 		cr.Kind = "child"
 		cr.ParentKey = row.Key
-		cr.Hidden = true
+		cr.Hidden = !row.Open  // visible when the parent is expanded (M4)
 		cr.Editable = editable // children are posting leaves → editable
 		r.Children = append(r.Children, cr)
 	}

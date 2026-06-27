@@ -303,3 +303,101 @@ reconciliation path.** Then close-out (`0006-budget-core.md` final) + demo **D3*
 - **Autocomplete + reconciliation matching deferred to 6d** (per plan): the label field is plain text; a
   quick-entry create does not auto-match an existing awaited row.
 - **Account-from-category prefill** is the category's first active envelope account, not usage-ranked (I-033).
+
+---
+
+## 6d — reconciliation seam + autocomplete + expand persistence — DONE (Milestone M2 complete)
+
+**Date.** 2026-06-27 · **Status.** complete, all gates green; **demo D3** held; awaiting go-ahead before
+increment 7. Delivered as **one PR** (user's choice).
+
+The last sub-increment of increment 6. Wires the existing `Labels`/`UIPreferences` repos into the Service and
+delivers the three remaining M2 pieces. Derived-not-stored holds: reconciliation writes only transaction rows;
+labels + expand are user state, not figures.
+
+### What was built
+
+- **Reconciliation orchestration seam** (`services/reconcile.go`) — the DB-write side of the pure
+  `engine.Reconcile`/`PairTransfer`. `ReconcileCleared`: loads the period's **awaited** candidates, decides via
+  the pure engine, and writes — **ReconcileInPlace** updates the awaited row (op_date + cleared + adopts the
+  real amount; variance → residual on read; the allocation is **not** raised, §7); **CreateNew** inserts a
+  cleared row; **Ambiguous** writes nothing (ids returned, no silent guess). `PairInternalTransfer` links two
+  opposite legs (`paired_transaction_id` both ways) atomically. `ensureEditable` guard. **Built + tested +
+  the mandatory review; not wired into manual auto-matching** (user-chosen, spec-strict — the manual flow
+  reconciles by hand via the 6c inline date-fill; this is the DSP2-shared seam, **I-034**).
+- **Label autocomplete (M21)** — labels learned on every create + label-edit (`label_mapping` Upsert,
+  usage++); the journal embeds the user's top-200 most-used labels as an inert JSON block + wires the
+  validated `econome.js` `emAutocomplete` (client-side prefix>substring ranking) on the quick-entry **and** the
+  inline label editor. `GET /api/labels` deferred (I-034).
+- **Expand persistence (M4)** — `PUT /ui/expand` (`SetExpand`); the forecast resolves each parent/leaf row's
+  open state from `ui_preference` (seeded by `category.default_expanded`), renders it open server-side, and
+  `app.js` persists every toggle. **O-23 fixed**: the forecast toggle rows are now `frow`/`fchev` (CSS ported)
+  so `econome.js` no longer double-wires them — `app.js` is the sole toggler (works for initial + htmx-swapped
+  rows, keyboard-operable). 
+- **Wiring**: `Labels`/`UIPreferences` added to `services.Deps`/`Service`/`New`, `cmd/econome`, and the two
+  test harnesses.
+
+### Specs satisfied
+
+`functional/04` §7 (reconciliation write orchestration, L6, variance→residual), `functional/05` §2 (M4
+expand), `functional/06` §5 (M21 autocomplete), `technical/04` §3.3 (`PUT /ui/expand`), `technical/09` §3 (the
+pure decision, consumed), `technical/03` §5.1/§5.2 (`label_mapping`/`ui_preference`). Decisions **I-034**
+(reuses I-031). No schema change.
+
+### Tests passing
+
+- **Reconciliation matrix** (`reconcile_test.go`, real SQLite — the mandatory-review surface): one →
+  ReconcileInPlace (awaited row updated, **no duplicate**); zero → CreateNew; several → Ambiguous (no write);
+  tolerance adopts the real amount on a variance; `PairInternalTransfer` links both legs.
+- **Learning** (`learning_test.go`): labels recorded + usage-ranked (`TopLabels`); `SetExpand`/`ExpandPrefs`;
+  the forecast renders a parent expanded after a pref; invalid node → 422.
+- **e2e backbone**: `PUT /ui/expand` → 204; reloading the forecast renders the persisted expanded `frow open`;
+  the journal embeds the learned labels.
+- **chromedp smoke**: the forecast **chevron** toggles (O-23 fixed) and the state **persists across a reload**;
+  the journal label field autocompletes.
+- Full suite + `gofumpt -l` + `go vet` (incl. `-tags chromedp`) + `golangci-lint` (gci) + `govulncheck` clean;
+  engine coverage **91.7 %** (engine untouched).
+
+### Verification (G8)
+
+Conformance checklist: derived-not-stored; tenant scoping (`user_id` repos, cross-tenant → 404); integer
+minor units, no float; exhaustive enum `switch` (decision kind, node type); recalc matrix honoured; locked
+guard inside both reconciliation writes; **DSP2 seam now write-complete** (`ReconcileCleared`/
+`PairInternalTransfer` are exactly what import drives — `source` unchanged, `external_ref`/
+`paired_transaction_id` ready, no reshape). **Mandatory targeted subagent review** of the reconciliation path
+run.
+
+### Milestone M2 (Budget core) — COMPLETE
+
+Increment 6 (6a→6d) done: the forecast (read-only → live `Prévu` edit + recalc + end-of-month transfer), the
+journal (quick-entry, whole-cell inline edit, sort/filter, transfer rows, atomic delete, manual
+reconcile-by-hand, autocomplete), the reconciliation seam, and per-user expand persistence — all CSP-clean,
+derived-not-stored, locked-guarded, DSP2-forward-compatible. **Demo D3** presented.
+
+### Exact next step
+
+**Increment 7 — Net worth (Synthèse + Registre)** (Milestone M3, `development-plan/01-phased-plan.md`):
+`functional/07` (whole), `functional/04` §3.6 (L7 snapshots always editable, independent of the budget lock),
+`rules` §12–§13 (PEA net, totals, deltas), `technical/04` §3.4, `technical/03` §4.3/§4.4. Routes
+`GET /networth`, `PATCH/POST/DELETE /snapshots`, `PUT /networth/:period/comment`, `GET /register`,
+`GET /register/chart`. **Independent of increments 4–6** (depends on inc 1 shell, inc 2 net-worth engine, inc 3
+snapshot/networth_month repos). Demo **D4** follows. This also resolves **O-21** (savings accounts gain the
+Patrimoine destination, so the forecast rail can list them). **Awaiting the user's go-ahead** (`G15`).
+
+### Open points
+
+- **O-23 RESOLVED** (forecast toggle now `frow`/`fchev`, `app.js` sole toggler).
+- The reconciliation seam (`ReconcileCleared`/`PairInternalTransfer`) has **no live caller** by design
+  (user-chosen, spec-strict); DSP2 (Stage 9) wires it. It is exported + tested, so not flagged unused.
+- **O-24 (DSP2-only, raised by the mandatory review).** `PairInternalTransfer`'s candidate model assumes
+  **two independent awaited leg rows**, but the app materialises an internal transfer as a **single**
+  source+dest row (`monthinit.go`). A future DSP2 caller observing the real **destination inflow** leg could
+  match it against an already-complete single-row transfer's source candidate and mis-pair. **Currently
+  unreachable** (the seam has no handler caller), so not a live bug; the **Stage-9 DSP2 increment must
+  resolve "one-row transfer vs two-leg pairing" before wiring** `PairInternalTransfer`. To be carried into the
+  Stage-8/9 prompt. The `ReconcileCleared` (non-transfer) path correctly excludes transfer candidates and is
+  unaffected.
+- `GET /api/labels` deferred (I-034) — the embedded autocomplete delivers M21; the fetch endpoint lands with
+  DSP2/scale.
+- **O-16/O-17/O-18** carry forward (opening-balance column; snapshots-at-init for cascade-full; the close
+  increment's sweep txn). **O-19** (chrome smoke flake) mitigated by the `WSURLReadTimeout` hardening.

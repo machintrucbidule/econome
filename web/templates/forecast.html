@@ -74,7 +74,7 @@
             {{template "fc-row" .}}
             {{if eq .Kind "parent"}}{{range .Children}}{{template "fc-row" .}}{{end}}{{end}}
             {{if .HasDrill}}
-              <tr class="drill hidden" data-d="{{.Key}}">
+              <tr class="drill{{if not .Open}} hidden{{end}}" data-d="{{.Key}}">
                 <td colspan="5"><div class="di">
                   <div class="dh"><span>{{if .Drill}}{{$.T "forecast.drill.title"}}{{else}}{{$.T "forecast.drill.empty"}}{{end}}</span><a class="jlink" href="/journal?period={{$.Period}}&scope={{$.Scope}}">{{$.T "forecast.drill.open"}}</a></div>
                   {{if .Drill}}<table>{{range .Drill}}<tr><td>{{.Label}}</td><td{{if .Approx}} style="color:var(--faint)"{{end}}>{{.DateStr}}</td><td class="n{{if .AmountNeg}} neg{{end}}">{{.AmountStr}}</td><td><span class="pill {{.StatusClass}}">{{.StatusLabel}}</span></td></tr>{{end}}</table>{{end}}
@@ -113,12 +113,12 @@
 {{define "fc-row"}}
 <tr id="fc-row-{{.Key}}"
   {{- if .OOB}} hx-swap-oob="outerHTML"{{end}}
-  {{- if eq .Kind "parent"}} class="tog" data-action="toggle-row" data-k="{{.Key}}"
-  {{- else if eq .Kind "leaf"}} class="tog" data-action="toggle-row" data-k="{{.Key}}"
+  {{- if eq .Kind "parent"}} class="frow{{if .Open}} open{{end}}" data-action="toggle-row" data-k="{{.Key}}" data-node-type="{{.NodeType}}" data-node-id="{{.NodeID}}"
+  {{- else if eq .Kind "leaf"}} class="frow{{if .Open}} open{{end}}" data-action="toggle-row" data-k="{{.Key}}" data-node-type="{{.NodeType}}" data-node-id="{{.NodeID}}"
   {{- else if eq .Kind "child"}} class="child{{if .Hidden}} hidden{{end}}" data-c="{{.ParentKey}}"
   {{- end}}>
   <td>
-    <div class="nm">{{if or (eq .Kind "parent") (eq .Kind "leaf")}}<button class="chev" type="button" tabindex="-1">›</button>{{end}}{{.Name}}{{if .ShowPill}} <span class="pill-acc">{{.AccountName}}</span>{{end}}</div>
+    <div class="nm">{{if or (eq .Kind "parent") (eq .Kind "leaf")}}<button class="fchev{{if .Open}} open{{end}}" type="button" tabindex="-1">›</button>{{end}}{{.Name}}{{if .ShowPill}} <span class="pill-acc">{{.AccountName}}</span>{{end}}</div>
     {{if .HasBar}}<div class="bar"><i style="width:{{.BarPercent}}%;background:var(--{{.BarClass}})"></i></div>{{end}}
   </td>
   {{if .Editable}}

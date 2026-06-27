@@ -75,7 +75,7 @@ func TestSmokeForecastRowExpand(t *testing.T) {
 	ctx, cancelT := context.WithTimeout(ctx, 50*time.Second)
 	defer cancelT()
 
-	var drillHidden bool
+	var drillHidden, persistedOpen bool
 	err := chromedp.Run(
 		ctx,
 		chromedp.Navigate(ts.URL+"/login"),
@@ -85,19 +85,25 @@ func TestSmokeForecastRowExpand(t *testing.T) {
 		chromedp.Submit(`#password`, chromedp.ByID),
 		chromedp.WaitVisible(`.app`, chromedp.ByQuery),
 		chromedp.Navigate(ts.URL+"/?period=2026-06&scope="+fID),
-		chromedp.WaitVisible(`tr.tog`, chromedp.ByQuery),
-		// Click a read-only body cell of the row (the État badge) — econome.js owns
-		// row toggling for .tog rows; clicks on the inline Prévu input must not
-		// toggle. (O-23: the chevron is double-wired with app.js — forecast follow-up.)
-		chromedp.Click(`tr.tog .pill`, chromedp.ByQuery),
-		chromedp.Sleep(150*time.Millisecond),
+		chromedp.WaitVisible(`tr.frow .fchev`, chromedp.ByQuery),
+		// The chevron now works (O-23 fixed: frow/fchev so econome.js no longer
+		// double-wires; app.js is the sole toggler).
+		chromedp.Click(`tr.frow .fchev`, chromedp.ByQuery),
+		chromedp.Sleep(300*time.Millisecond), // allow the PUT /ui/expand to persist
 		chromedp.Evaluate(`document.querySelector('tr.drill').classList.contains('hidden')`, &drillHidden),
+		// Reload: the expanded state persists (ui_preference, M4).
+		chromedp.Navigate(ts.URL+"/?period=2026-06&scope="+fID),
+		chromedp.WaitVisible(`tr.frow`, chromedp.ByQuery),
+		chromedp.Evaluate(`document.querySelector('tr.frow').classList.contains('open')`, &persistedOpen),
 	)
 	if err != nil {
 		t.Fatalf("chromedp forecast expand smoke: %v", err)
 	}
 	if drillHidden {
-		t.Error("clicking a leaf row should reveal its drill-down (still hidden)")
+		t.Error("clicking the chevron should reveal the drill-down (still hidden)")
+	}
+	if !persistedOpen {
+		t.Error("expand state should persist across a reload (M4)")
 	}
 }
 

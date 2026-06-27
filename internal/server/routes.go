@@ -62,6 +62,7 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	mux.Handle("POST /transactions", protected(http.HandlerFunc(h.TransactionCreate)))
 	mux.Handle("PATCH /transactions/{id}", protected(http.HandlerFunc(h.TransactionPatch)))
 	mux.Handle("DELETE /transactions/{id}", protected(http.HandlerFunc(h.TransactionDelete)))
+	mux.Handle("PUT /ui/expand", protected(http.HandlerFunc(h.UIExpand)))
 
 	// Configuration — Paramètres (increment 4, PR-a).
 	mux.Handle("GET /config/parameters", protected(http.HandlerFunc(h.ParametersGet)))

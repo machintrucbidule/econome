@@ -99,6 +99,7 @@ type JournalView struct {
 	CatsJSON   template.JS
 	AcctsJSON  template.JS
 	StatusJSON template.JS
+	LabelsJSON template.JS // learned labels for the autocomplete (M21)
 	TodayDDMM  string
 
 	// filter state (reflected back into the controls)

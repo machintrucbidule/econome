@@ -256,6 +256,7 @@ func (h *Handlers) journalView(r *http.Request, d *services.JournalData) view.Jo
 	}
 	v.PickerOpen = strings.TrimSpace(r.URL.Query().Get("pick")) == "1"
 	v.CatsJSON, v.AcctsJSON, v.StatusJSON = h.journalOptions(base, d)
+	v.LabelsJSON = h.journalLabels(r)
 	v.FQ, v.FCategory, v.FTransfers, v.FStatuses = h.journalFilterState(base, r)
 	if !d.Exists {
 		return v
@@ -386,6 +387,26 @@ func (h *Handlers) journalFilterState(base view.Base, r *http.Request) (q, categ
 }
 
 // --- small helpers ---
+
+// journalLabels embeds the user's most-used labels for the emAutocomplete widget
+// ([{label, count}], M21). Bounded to a top-N; the static widget ranks
+// prefix>substring + usage client-side.
+func (h *Handlers) journalLabels(r *http.Request) template.JS {
+	c := middleware.From(r.Context())
+	rows, err := h.svc.TopLabels(r.Context(), c.User.ID, 200)
+	if err != nil {
+		return template.JS("[]")
+	}
+	type lbl struct {
+		Label string `json:"label"`
+		Count int    `json:"count"`
+	}
+	out := make([]lbl, 0, len(rows))
+	for _, m := range rows {
+		out = append(out, lbl{Label: m.Label, Count: m.UsageCount})
+	}
+	return asJSON(out)
+}
 
 func asJSON(v any) template.JS {
 	b, err := json.Marshal(v)

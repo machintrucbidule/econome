@@ -65,6 +65,8 @@ type Service struct {
 	snapshots    repo.SnapshotRepo
 	periods      repo.PeriodRepo
 	periodEvents repo.PeriodEventRepo
+	labels       repo.LabelMappingRepo
+	uiPrefs      repo.UIPreferenceRepo
 	tx           repo.Txer
 	secret       []byte
 	throttle     *auth.Throttle
@@ -76,19 +78,21 @@ type Service struct {
 // interface-typed fields, so a named struct keeps the wiring readable as the
 // service grows across increments rather than a long positional argument list.
 type Deps struct {
-	Users        repo.UserRepo
-	Sessions     repo.SessionRepo
-	Settings     repo.SettingsRepo
-	Accounts     repo.AccountRepo
-	Categories   repo.CategoryRepo
-	Envelopes    repo.EnvelopeRepo
-	Allocations  repo.AllocationRepo
-	Transactions repo.TransactionRepo
-	Snapshots    repo.SnapshotRepo
-	Periods      repo.PeriodRepo
-	PeriodEvents repo.PeriodEventRepo
-	Tx           repo.Txer
-	Secret       []byte
+	Users         repo.UserRepo
+	Sessions      repo.SessionRepo
+	Settings      repo.SettingsRepo
+	Accounts      repo.AccountRepo
+	Categories    repo.CategoryRepo
+	Envelopes     repo.EnvelopeRepo
+	Allocations   repo.AllocationRepo
+	Transactions  repo.TransactionRepo
+	Snapshots     repo.SnapshotRepo
+	Periods       repo.PeriodRepo
+	PeriodEvents  repo.PeriodEventRepo
+	Labels        repo.LabelMappingRepo
+	UIPreferences repo.UIPreferenceRepo
+	Tx            repo.Txer
+	Secret        []byte
 }
 
 // New builds a Service from its dependencies. Tests inject fakes for the same
@@ -106,6 +110,8 @@ func New(d Deps) *Service {
 		snapshots:    d.Snapshots,
 		periods:      d.Periods,
 		periodEvents: d.PeriodEvents,
+		labels:       d.Labels,
+		uiPrefs:      d.UIPreferences,
 		tx:           d.Tx,
 		secret:       d.Secret,
 		throttle:     auth.NewThrottle(20, time.Minute),

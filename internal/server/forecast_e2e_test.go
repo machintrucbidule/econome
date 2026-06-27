@@ -3,6 +3,7 @@ package server_test
 import (
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -152,6 +153,50 @@ func TestForecastInlineEditRecompute(t *testing.T) {
 		t.Errorf("end-of-month transfer with nothing to sweep = %d, want 409", resp.StatusCode)
 	}
 	_ = bodyOf(t, resp)
+}
+
+func TestForecastExpandPersists(t *testing.T) {
+	ts, client := setupOwner(t)
+	base := ts.URL
+	fID := mkAccountID(t, base, client, "Fortuneo", "current", "sweep")
+	// Two envelopes under a parent category "Assurance".
+	for _, name := range []string{"Habitation", "Auto"} {
+		mkEnvHTTP(t, base, client, url.Values{
+			"name": {name}, "parent_id": {"__new__"}, "new_parent_name": {"Assurance"}, "flow_type": {"expense"}, "account_id": {fID},
+			"mode": {"fixed_recurring"}, "default_amount": {"30,00"}, "frequency": {"monthly"}, "expected_day": {"8"},
+		})
+	}
+	tok := csrfToken(t, client, base, "/config/parameters")
+	if resp := formReq(t, client, http.MethodPost, base+"/month-init?period=2026-06", url.Values{"_csrf": {tok}}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("create month = %d", resp.StatusCode)
+	}
+
+	// The parent row is collapsed by default; grab its category node id (raw body
+	// — goquery would reorder the attributes).
+	pr, _ := client.Get(base + "/?period=2026-06&scope=" + fID)
+	page := bodyOf(t, pr)
+	m := regexp.MustCompile(`data-node-id="(\d+)"[^>]*data-node-type="category"|data-node-type="category"[^>]*data-node-id="(\d+)"`).FindStringSubmatch(page)
+	if m == nil {
+		t.Fatalf("no parent category row found")
+	}
+	catID := m[1] + m[2]
+
+	// Persist expanded.
+	tok = csrfToken(t, client, base, "/config/parameters")
+	resp := formReq(t, client, http.MethodPut, base+"/ui/expand", url.Values{
+		"_csrf": {tok}, "node_type": {"category"}, "node_id": {catID}, "expanded": {"1"},
+	})
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("PUT /ui/expand = %d, want 204", resp.StatusCode)
+	}
+	_ = bodyOf(t, resp)
+
+	// Re-render: the parent row is now open + its children visible.
+	pr, _ = client.Get(base + "/?period=2026-06&scope=" + fID)
+	page = bodyOf(t, pr)
+	if !strings.Contains(page, `class="frow open"`) {
+		t.Error("parent row should render expanded after PUT /ui/expand")
+	}
 }
 
 func TestForecastScopeCarryAndAggregated(t *testing.T) {
