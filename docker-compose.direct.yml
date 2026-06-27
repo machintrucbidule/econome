@@ -1,0 +1,42 @@
+# Direct local/LAN access — NO reverse proxy (technical/07 §2/§3). Use this when
+# you reach EconoMe straight at http://<host>:8765 (e.g. a home server) rather
+# than through a TLS-terminating proxy. For the proxy/prod-parity setup use
+# docker-compose.yml instead. The day-to-day Windows loop still uses
+# scripts/start.bat (native exe), not compose.
+#
+# Load-bearing: the SQLite database + secret live on a MOUNTED NAMED VOLUME, never
+# in the container's writable layer — this is what keeps data safe across
+# Watchtower image recreation.
+#
+# Two things that differ from the proxy variant (and bit on the first deploy):
+#   * ports (not expose): the port must be PUBLISHED to the host, otherwise it is
+#     only reachable container-to-container.
+#   * ECONOME_BEHIND_TLS=0: served over plain HTTP, so the session cookie must NOT
+#     be Secure-only (with =1 the browser drops it over http:// and login fails).
+#     Only do this on a trusted LAN; put TLS in front for any remote exposure.
+#
+# First-deploy note: the image runs as the non-root user (UID/GID 65532) and owns
+# /data from v0.0.2 on, so a FRESH named volume is writable out of the box. A
+# volume left root-owned by an older image must be recreated (it holds no data
+# until setup) or chowned:  docker run --rm -v econome-data:/data busybox chown -R 65532:65532 /data
+services:
+  econome:
+    image: ghcr.io/machintrucbidule/econome:stable
+    container_name: econome
+    restart: unless-stopped
+    labels:
+      # Watchtower: auto-pull when the :stable tag is updated.
+      - 'com.centurylinklabs.watchtower.enable=true'
+    environment:
+      ECONOME_DATA_DIR: /data
+      ECONOME_LISTEN: ":8765"
+      ECONOME_BEHIND_TLS: "0"        # plain HTTP (no upstream TLS) — trusted LAN only
+      ECONOME_DEFAULT_LOCALE: fr
+      ECONOME_LOG_LEVEL: info
+    ports:
+      - "8765:8765"                  # publish to the host → http://<host>:8765
+    volumes:
+      - econome-data:/data
+
+volumes:
+  econome-data:

@@ -1,5 +1,7 @@
-# Optional compose for prod/parity testing (technical/07 §2, §4). The day-to-day
-# local loop uses scripts/start.bat (native exe), not this file.
+# Optional compose for prod/parity testing (technical/07 §2, §4) — BEHIND a
+# TLS-terminating reverse proxy on the external `proxy` network. For direct
+# local/LAN access without a proxy, use docker-compose.direct.yml instead. The
+# day-to-day local loop uses scripts/start.bat (native exe), not this file.
 #
 # Load-bearing: the SQLite database + secret live on a MOUNTED NAMED VOLUME, never
 # in the container's writable layer — this is what keeps data safe across
