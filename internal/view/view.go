@@ -96,6 +96,8 @@ type AuthView struct {
 	FieldErrors   map[string]string // field -> localised message
 	Email         string            // sticky value on re-render
 	Remember      bool
+	TOTPStep      bool   // login: show the 2FA code step instead of the credentials form
+	Pending       string // signed pending-2FA token carried into the TOTP step
 }
 
 // FieldError returns the localised error for a field, or "".

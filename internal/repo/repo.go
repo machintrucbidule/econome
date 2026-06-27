@@ -23,20 +23,30 @@ type DBTX interface {
 // user-owned query is user_id-scoped (technical/01 §4).
 type UserRepo interface {
 	CountUsers(ctx context.Context, q DBTX) (int, error)
+	CountActiveAdmins(ctx context.Context, q DBTX) (int, error)
 	GetByEmail(ctx context.Context, q DBTX, email string) (*domain.User, error)
 	GetByID(ctx context.Context, q DBTX, id int64) (*domain.User, error)
+	ListAll(ctx context.Context, q DBTX) ([]domain.User, error)
 	Create(ctx context.Context, q DBTX, u *domain.User) (int64, error)
 	UpdateLoginState(ctx context.Context, q DBTX, u *domain.User) error
 	UpdatePasswordHash(ctx context.Context, q DBTX, id int64, hash string) error
+	SetPassword(ctx context.Context, q DBTX, id int64, hash string, mustChange bool) error
+	UpdateEmail(ctx context.Context, q DBTX, id int64, email string) error
+	UpdateTOTP(ctx context.Context, q DBTX, id int64, enabled bool, secret *string) error
+	UpdateStatus(ctx context.Context, q DBTX, id int64, status domain.Status) error
+	SetAdmin(ctx context.Context, q DBTX, id int64, isAdmin bool) error
 }
 
 // SessionRepo persists opaque sessions (token stored only as its SHA-256).
 type SessionRepo interface {
 	Create(ctx context.Context, q DBTX, s *domain.Session) (int64, error)
 	GetByTokenHash(ctx context.Context, q DBTX, tokenHash string) (*domain.Session, error)
+	ListByUser(ctx context.Context, q DBTX, userID int64) ([]domain.Session, error)
 	Touch(ctx context.Context, q DBTX, id int64, lastSeen, expires time.Time) error
 	Delete(ctx context.Context, q DBTX, id int64) error
+	DeleteByUserScoped(ctx context.Context, q DBTX, userID, id int64) error
 	DeleteByUser(ctx context.Context, q DBTX, userID int64) error
+	DeleteByUserExcept(ctx context.Context, q DBTX, userID, keepID int64) error
 }
 
 // SettingsRepo persists the single per-user settings row.

@@ -1,0 +1,78 @@
+{{define "force-password"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "head" .}}<title>{{.T "force.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="authstage">
+  <div class="authwrap">
+    <div class="brand">Econo<b>Me</b></div>
+    <div class="auth-card">
+      <h1>{{.T "force.title"}}</h1>
+      <p class="muted">{{.T "force.help"}}</p>
+      {{if .FormError}}<div class="errbox">{{.FormError}}</div>{{end}}
+      <form method="post" action="/security/password">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <input type="hidden" name="mode" value="force">
+        <div class="fld"><label for="current_password">{{.T "force.current"}}</label>
+          <input class="inp" id="current_password" type="password" name="current_password" autocomplete="current-password" required autofocus>
+          {{if .FieldError "current_password"}}<span class="err">{{.FieldError "current_password"}}</span>{{end}}
+        </div>
+        <div class="fld"><label for="password">{{.T "security.password.new"}}</label>
+          <input class="inp" id="password" type="password" name="password" autocomplete="new-password" required>
+          {{if .FieldError "password"}}<span class="err">{{.FieldError "password"}}</span>{{end}}
+        </div>
+        <div class="fld"><label for="password_confirm">{{.T "security.password.confirm"}}</label>
+          <input class="inp" id="password_confirm" type="password" name="password_confirm" autocomplete="new-password" required>
+          {{if .FieldError "password_confirm"}}<span class="err">{{.FieldError "password_confirm"}}</span>{{end}}
+        </div>
+        <button class="btn primary btn-block" type="submit">{{.T "security.password.submit"}}</button>
+      </form>
+    </div>
+  </div>
+</div>
+{{template "scripts" .}}
+</body>
+</html>{{end}}
+
+
+{{define "accept"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "head" .}}<title>{{.T "accept.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="authstage">
+  <div class="authwrap">
+    <div class="brand">Econo<b>Me</b></div>
+    <div class="tagline">{{.T "app.tagline"}}</div>
+    <div class="auth-card">
+      {{if .Invalid}}
+        <h1>{{.T "accept.invalid.title"}}</h1>
+        <p class="muted">{{.T "accept.invalid.body"}}</p>
+        <a class="btn btn-block" href="/login">{{.T "accept.invalid.login"}}</a>
+      {{else}}
+        <h1>{{.T "accept.heading"}}</h1>
+        {{if .GenericError}}<div class="errbox">{{.GenericError}}</div>{{end}}
+        <form method="post" action="/invite/{{.Token}}">
+          <input type="hidden" name="_csrf" value="{{.CSRF}}">
+          <div class="fld"><label for="email">{{.T "login.email"}}</label>
+            <input class="inp" id="email" type="email" name="email" value="{{.Email}}" autocomplete="username" required autofocus>
+            {{if .FieldError "email"}}<span class="err">{{.FieldError "email"}}</span>{{end}}
+          </div>
+          <div class="fld"><label for="password">{{.T "login.password"}}</label>
+            <input class="inp" id="password" type="password" name="password" autocomplete="new-password" required>
+            {{if .FieldError "password"}}<span class="err">{{.FieldError "password"}}</span>{{end}}
+          </div>
+          <div class="fld"><label for="password_confirm">{{.T "security.password.confirm"}}</label>
+            <input class="inp" id="password_confirm" type="password" name="password_confirm" autocomplete="new-password" required>
+            {{if .FieldError "password_confirm"}}<span class="err">{{.FieldError "password_confirm"}}</span>{{end}}
+          </div>
+          <div class="fld"><label for="language">{{.T "setup.language"}}</label>
+            <select class="inp" id="language" name="language">{{range .LangOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}</select>
+          </div>
+          <button class="btn primary btn-block" type="submit">{{.T "accept.submit"}}</button>
+        </form>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{template "scripts" .}}
+</body>
+</html>{{end}}

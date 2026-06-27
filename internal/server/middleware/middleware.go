@@ -131,6 +131,46 @@ func AuthGuard(next http.Handler) http.Handler {
 	})
 }
 
+// AdminGuard requires the authenticated user to be an admin; a non-admin gets a
+// 404 (never 403 — the isolation invariant: never disclose that the route
+// exists). Applied to /admin/* after TenantContext has set Ctx.IsAdmin.
+func AdminGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !From(r.Context()).IsAdmin {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// ForcePasswordChange redirects a user flagged must_change_password to the forced
+// change-password page until it is cleared (technical/05 §8). The change endpoint,
+// logout, and assets are exempt so the user can complete the change or leave.
+func ForcePasswordChange(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c := From(r.Context())
+		if c.User != nil && c.User.MustChangePassword && !passwordChangeExempt(r.URL.Path) {
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Redirect", "/password")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			http.Redirect(w, r, "/password", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func passwordChangeExempt(path string) bool {
+	switch path {
+	case "/password", "/security/password", "/logout":
+		return true
+	}
+	return strings.HasPrefix(path, "/assets/")
+}
+
 // TenantContext injects the locale/currency/admin flag from the authenticated
 // user + settings. Downstream code reads user_id only from here.
 func TenantContext(d Deps) func(http.Handler) http.Handler {

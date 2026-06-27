@@ -21,7 +21,9 @@
         {{template "card-preferences" .}}
         {{template "card-dsp2" .}}
         <div class="psec">{{.T "param.section.security"}}</div>
-        {{template "card-auth-stub" .}}
+        {{template "card-profil" .}}
+        {{template "card-securite" .}}
+        {{if .IsAdmin}}{{template "card-utilisateurs" .}}{{end}}
       </div>
     </div>
   </main>
@@ -174,12 +176,68 @@
 {{end}}
 
 
-{{/* --- Auth panels: entry points only; built in increment 8 --- */}}
-{{define "card-auth-stub"}}
-<div class="pcard dim">
-  <div class="torow" style="border:0;padding:0">
-    <div><h2 style="margin:0">{{.T "param.security.title"}} <span class="pill mut">{{.T "param.dsp2.soon"}}</span></h2><div class="ts" style="margin-top:6px">{{.T "param.security.sub"}}</div></div>
+{{/* --- Profil card (email change) --- */}}
+{{define "card-profil"}}
+<div class="pcard">
+  <h2>{{.T "param.profil.title"}}</h2>
+  <div class="torow"><div><div class="tt">{{.T "param.profil.email"}}</div><div class="ts">{{.Email}}</div></div>
+    <button class="btn" type="button" hx-get="/security/email" hx-target="#modal-host" hx-swap="innerHTML">{{.T "param.profil.change_email"}}</button>
   </div>
+</div>
+{{end}}
+
+{{/* --- Sécurité card (2FA, password, sessions) --- */}}
+{{define "card-securite"}}
+<div class="pcard">
+  <h2>{{.T "param.security.title"}}</h2>
+  <div class="torow">
+    <div><div class="tt">{{.T "param.security.2fa"}}</div><div class="ts">{{.T "param.security.2fa_sub"}}{{if .TOTPEnabled}} · {{.T "param.security.backup_left" (itoa .BackupRemaining)}}{{end}}</div></div>
+    {{if .TOTPEnabled}}
+      <div style="display:flex;gap:8px">
+        <button class="btn" type="button" hx-post="/security/2fa/backup" hx-target="#modal-host" hx-swap="innerHTML">{{.T "param.security.regen"}}</button>
+        <button class="btn" type="button" hx-get="/security/2fa/disable" hx-target="#modal-host" hx-swap="innerHTML">{{.T "param.security.disable"}}</button>
+      </div>
+    {{else}}
+      <button class="btn primary" type="button" hx-get="/security/2fa" hx-target="#modal-host" hx-swap="innerHTML">{{.T "param.security.enable"}}</button>
+    {{end}}
+  </div>
+  <div class="torow"><div><div class="tt">{{.T "param.security.password"}}</div><div class="ts">{{.T "param.security.password_sub"}}</div></div>
+    <button class="btn" type="button" hx-get="/security/password" hx-target="#modal-host" hx-swap="innerHTML">{{.T "param.security.change_pw"}}</button>
+  </div>
+  <div class="torow"><div><div class="tt">{{.T "param.security.sessions"}}</div>
+    <div class="ts">
+      {{range .Sessions}}{{.Device}} · {{.IP}} · {{.LastSeen}}{{if .Current}} · <b>{{$.T "param.security.this_device"}}</b>{{else}} <button class="linkbtn" type="button" hx-post="/security/sessions/{{.ID}}/revoke">{{$.T "param.security.revoke"}}</button>{{end}}<br>{{end}}
+    </div></div>
+    <button class="linkbtn" type="button" hx-post="/security/sessions/revoke-all">{{.T "param.security.logout_all"}}</button>
+  </div>
+</div>
+{{end}}
+
+{{/* --- Utilisateurs card (admin only) --- */}}
+{{define "card-utilisateurs"}}
+<div class="pcard" id="users-card">
+  <div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0">{{.T "param.users.title"}}</h2><span class="sp" style="flex:1"></span>
+    <button class="btn primary" type="button" hx-get="/admin/invitations/new" hx-target="#modal-host" hx-swap="innerHTML">{{.T "param.users.invite"}}</button>
+  </div>
+  <p class="desc" style="margin-top:10px">{{.T "param.users.help"}}</p>
+  <table class="ptable">
+    <thead><tr><th>{{.T "param.users.col.user"}}</th><th>{{.T "param.users.col.role"}}</th><th>{{.T "param.users.col.status"}}</th><th></th></tr></thead>
+    <tbody>
+    {{range .Users}}
+      <tr><td>{{.Email}}{{if .IsSelf}} <span class="pill mut">{{$.T "param.users.you"}}</span>{{end}}</td>
+        <td><span class="pill {{.RoleClass}}">{{.RoleLabel}}</span></td>
+        <td><span class="pill {{.StatusClass}}">{{.StatusLabel}}</span></td>
+        <td><button class="iconbtn sm2" type="button" title="{{$.T "param.users.manage"}}" hx-get="/admin/users/{{.ID}}" hx-target="#modal-host" hx-swap="innerHTML">✎</button></td>
+      </tr>
+    {{end}}
+    {{range .Invitations}}
+      <tr><td>{{.Email}}</td><td><span class="pill mut">{{$.T "users.role.member"}}</span></td>
+        <td><span class="pill {{.StatusClass}}">{{.StatusLabel}}</span></td>
+        <td>{{if .Pending}}<button class="iconbtn sm2" type="button" title="{{$.T "param.users.revoke"}}" hx-post="/admin/invitations/{{.ID}}/revoke">✕</button>{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
 </div>
 {{end}}
 
@@ -214,6 +272,108 @@
         <button class="btn primary" type="submit">{{.T "action.save"}}</button>
       </div>
     </form>
+  </div>
+</div>
+{{end}}
+
+
+{{/* --- Security modal (2FA enrol/backup/disable, password, email) --- */}}
+{{define "security-modal"}}
+<div class="modal" id="sec-modal">
+  <div class="modal-card">
+    <div class="modal-h"><h3>{{.T (printf "security.%s.title" .Kind)}}</h3><span class="sp" style="flex:1"></span><button class="iconbtn" type="button" data-action="modal-close" title="{{.T "action.close"}}">✕</button></div>
+    {{if .FormError}}<div class="form-err">{{.FormError}}</div>{{end}}
+    {{if eq .Kind "enrol"}}
+      <p class="ts">{{.T "security.enrol.help"}}</p>
+      <div style="text-align:center;margin:12px 0"><img src="{{.QRDataURI}}" alt="QR" width="200" height="200"></div>
+      <p class="ts">{{.T "security.enrol.manual"}} <code>{{.Secret}}</code></p>
+      <form hx-post="/security/2fa" hx-target="#modal-host" hx-swap="innerHTML">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <div class="fwrap full"><label>{{.T "security.enrol.code"}}</label><input class="inp" name="code" inputmode="numeric" autocomplete="one-time-code" autofocus>{{if .FieldError "code"}}<span class="err">{{.FieldError "code"}}</span>{{end}}</div>
+        <div class="modal-f"><button class="btn" type="button" data-action="modal-close">{{.T "action.cancel"}}</button><button class="btn primary" type="submit">{{.T "security.enrol.confirm"}}</button></div>
+      </form>
+    {{else if eq .Kind "backup"}}
+      <p class="ts">{{.T "security.backup.help"}}</p>
+      <ul class="codes">{{range .BackupCodes}}<li><code>{{.}}</code></li>{{end}}</ul>
+      <div class="modal-f"><a class="btn primary" href="/config/parameters">{{.T "security.backup.done"}}</a></div>
+    {{else if eq .Kind "disable"}}
+      <form hx-post="/security/2fa/disable" hx-target="#modal-host" hx-swap="innerHTML">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <div class="fwrap full"><label>{{.T "security.password.current"}}</label><input class="inp" type="password" name="password" autocomplete="current-password" autofocus>{{if .FieldError "password"}}<span class="err">{{.FieldError "password"}}</span>{{end}}</div>
+        <div class="fwrap full"><label>{{.T "security.disable.code"}}</label><input class="inp" name="code" inputmode="numeric">{{if .FieldError "code"}}<span class="err">{{.FieldError "code"}}</span>{{end}}</div>
+        <div class="modal-f"><button class="btn" type="button" data-action="modal-close">{{.T "action.cancel"}}</button><button class="btn primary" type="submit">{{.T "security.disable.submit"}}</button></div>
+      </form>
+    {{else if eq .Kind "password"}}
+      {{template "pw-fields" .}}
+    {{else if eq .Kind "email"}}
+      <form hx-post="/security/email" hx-target="#modal-host" hx-swap="innerHTML">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <div class="fwrap full"><label>{{.T "param.profil.new_email"}}</label><input class="inp" type="email" name="email" autocomplete="username" autofocus>{{if .FieldError "email"}}<span class="err">{{.FieldError "email"}}</span>{{end}}</div>
+        <div class="fwrap full"><label>{{.T "security.password.current"}}</label><input class="inp" type="password" name="password" autocomplete="current-password">{{if .FieldError "password"}}<span class="err">{{.FieldError "password"}}</span>{{end}}</div>
+        <div class="modal-f"><button class="btn" type="button" data-action="modal-close">{{.T "action.cancel"}}</button><button class="btn primary" type="submit">{{.T "action.save"}}</button></div>
+      </form>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{/* shared current+new+confirm password fields (modal context) */}}
+{{define "pw-fields"}}
+<form hx-post="/security/password" hx-target="#modal-host" hx-swap="innerHTML">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <div class="fwrap full"><label>{{.T "security.password.current"}}</label><input class="inp" type="password" name="current_password" autocomplete="current-password" autofocus>{{if .FieldError "current_password"}}<span class="err">{{.FieldError "current_password"}}</span>{{end}}</div>
+  <div class="fwrap full"><label>{{.T "security.password.new"}}</label><input class="inp" type="password" name="password" autocomplete="new-password">{{if .FieldError "password"}}<span class="err">{{.FieldError "password"}}</span>{{end}}</div>
+  <div class="fwrap full"><label>{{.T "security.password.confirm"}}</label><input class="inp" type="password" name="password_confirm" autocomplete="new-password">{{if .FieldError "password_confirm"}}<span class="err">{{.FieldError "password_confirm"}}</span>{{end}}</div>
+  <div class="modal-f"><button class="btn" type="button" data-action="modal-close">{{.T "action.cancel"}}</button><button class="btn primary" type="submit">{{.T "security.password.submit"}}</button></div>
+</form>
+{{end}}
+
+{{/* --- Invite modal (admin) --- */}}
+{{define "invite-modal"}}
+<div class="modal" id="invite-modal">
+  <div class="modal-card">
+    <div class="modal-h"><h3>{{.T "users.invite.title"}}</h3><span class="sp" style="flex:1"></span><button class="iconbtn" type="button" data-action="modal-close" title="{{.T "action.close"}}">✕</button></div>
+    {{if .Created}}
+      <p class="ts">{{.T "users.invite.link_help"}}</p>
+      <div class="fwrap full"><input class="inp" value="{{.Link}}" readonly></div>
+      <div class="modal-f"><a class="btn primary" href="/config/parameters">{{.T "action.close"}}</a></div>
+    {{else}}
+      <form hx-post="/admin/invitations" hx-target="#modal-host" hx-swap="innerHTML">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <p class="ts">{{.T "users.invite.help"}}</p>
+        <div class="fwrap full"><label>{{.T "users.invite.email"}}</label><input class="inp" type="email" name="email" placeholder="{{.T "users.invite.email_ph"}}">{{if .FieldError "email"}}<span class="err">{{.FieldError "email"}}</span>{{end}}</div>
+        <div class="fwrap full"><label>{{.T "users.invite.role"}}</label>
+          <select class="inp" name="role"><option value="member">{{.T "users.role.member"}}</option><option value="admin">{{.T "users.role.admin"}}</option></select>
+        </div>
+        <div class="modal-f"><button class="btn" type="button" data-action="modal-close">{{.T "action.cancel"}}</button><button class="btn primary" type="submit">{{.T "users.invite.create"}}</button></div>
+      </form>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{/* --- User-manage modal (admin) --- */}}
+{{define "user-modal"}}
+<div class="modal" id="user-modal">
+  <div class="modal-card">
+    <div class="modal-h"><h3>{{.Email}}</h3><span class="sp" style="flex:1"></span><button class="iconbtn" type="button" data-action="modal-close" title="{{.T "action.close"}}">✕</button></div>
+    {{if .Notice}}<div class="form-ok">{{.Notice}}</div>{{end}}
+    {{if .TempPass}}
+      <p class="ts">{{.T "users.reset_pw.help"}}</p>
+      <div class="fwrap full"><input class="inp" value="{{.TempPass}}" readonly></div>
+      <div class="modal-f"><a class="btn primary" href="/config/parameters">{{.T "action.close"}}</a></div>
+    {{else}}
+      <div class="ucol">
+        {{if .Deactivated}}
+          <button class="btn" type="button" hx-post="/admin/users/{{.ID}}/reactivate">{{.T "users.reactivate"}}</button>
+        {{else if not .IsSelf}}
+          <button class="btn" type="button" hx-post="/admin/users/{{.ID}}/deactivate" hx-confirm="{{.T "users.deactivate_confirm"}}">{{.T "users.deactivate"}}</button>
+        {{end}}
+        {{if .TOTPEnabled}}<button class="btn" type="button" hx-post="/admin/users/{{.ID}}/reset-2fa" hx-confirm="{{.T "users.reset_2fa_confirm"}}">{{.T "users.reset_2fa"}}</button>{{end}}
+        <button class="btn" type="button" hx-post="/admin/users/{{.ID}}/reset-password" hx-target="#modal-host" hx-swap="innerHTML">{{.T "users.reset_pw"}}</button>
+      </div>
+      <div class="modal-f"><button class="btn" type="button" data-action="modal-close">{{.T "action.close"}}</button></div>
+    {{end}}
   </div>
 </div>
 {{end}}

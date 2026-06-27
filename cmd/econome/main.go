@@ -94,6 +94,8 @@ func run() error {
 		PeriodEvents:   store.PeriodEvents,
 		Labels:         store.Labels,
 		UIPreferences:  store.UIPreferences,
+		Invitations:    store.Invitations,
+		TOTPBackups:    store.TOTPBackups,
 		Tx:             store,
 		Secret:         secret,
 	})

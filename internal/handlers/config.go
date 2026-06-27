@@ -472,7 +472,108 @@ func (h *Handlers) parametersView(r *http.Request, userID int64) (view.Parameter
 	if settings.DefaultAccountID != nil {
 		v.Settings.DefaultAccountID = *settings.DefaultAccountID
 	}
+
+	if err := h.securityPanel(r, &v, userID); err != nil {
+		return v, err
+	}
 	return v, nil
+}
+
+// securityPanel fills the Security (self) + Users (admin) panel data.
+func (h *Handlers) securityPanel(r *http.Request, v *view.ParametersView, userID int64) error {
+	base := h.base(r)
+	c := middleware.From(r.Context())
+	ctx := r.Context()
+
+	v.TOTPEnabled = c.User.TOTPEnabled
+	if v.TOTPEnabled {
+		n, err := h.svc.BackupCodesRemaining(ctx, userID)
+		if err != nil {
+			return err
+		}
+		v.BackupRemaining = n
+	}
+
+	curHash := ""
+	if c.Session != nil {
+		curHash = c.Session.TokenHash
+	}
+	sessions, err := h.svc.ListSessions(ctx, userID, curHash)
+	if err != nil {
+		return err
+	}
+	for _, sv := range sessions {
+		v.Sessions = append(v.Sessions, view.SessionRow{
+			ID:       sv.Session.ID,
+			Device:   deviceLabel(sv.Session.UserAgent),
+			IP:       strOrDash(sv.Session.IP),
+			LastSeen: sv.Session.LastSeenAt.Format("2006-01-02 15:04"),
+			Current:  sv.Current,
+		})
+	}
+
+	if !c.IsAdmin {
+		return nil
+	}
+	users, err := h.svc.ListUsers(ctx)
+	if err != nil {
+		return err
+	}
+	for _, u := range users {
+		row := view.UserRow{
+			ID: u.ID, Email: u.Email, IsSelf: u.ID == userID,
+			Deactivated: u.Status == domain.StatusDeactivated, TOTPEnabled: u.TOTPEnabled,
+		}
+		if u.IsAdmin {
+			row.RoleLabel, row.RoleClass = base.T("users.role.admin"), "info"
+		} else {
+			row.RoleLabel, row.RoleClass = base.T("users.role.member"), "mut"
+		}
+		if row.Deactivated {
+			row.StatusLabel, row.StatusClass = base.T("users.status.deactivated"), "mut"
+		} else {
+			row.StatusLabel, row.StatusClass = base.T("users.status.active"), "ok"
+		}
+		v.Users = append(v.Users, row)
+	}
+	invs, err := h.svc.ListInvitations(ctx, userID)
+	if err != nil {
+		return err
+	}
+	now := h.svc.Now()
+	for _, inv := range invs {
+		row := view.InvitationRow{ID: inv.ID, Email: strOrDash(inv.Email)}
+		switch {
+		case inv.ConsumedAt != nil:
+			row.StatusLabel, row.StatusClass = base.T("users.inv.accepted"), "ok"
+		case inv.RevokedAt != nil:
+			row.StatusLabel, row.StatusClass = base.T("users.inv.revoked"), "mut"
+		case now.After(inv.ExpiresAt):
+			row.StatusLabel, row.StatusClass = base.T("users.inv.expired"), "mut"
+		default:
+			row.StatusLabel, row.StatusClass, row.Pending = base.T("users.inv.pending"), "warn", true
+		}
+		v.Invitations = append(v.Invitations, row)
+	}
+	return nil
+}
+
+func deviceLabel(ua *string) string {
+	if ua == nil || *ua == "" {
+		return "—"
+	}
+	s := *ua
+	if len(s) > 60 {
+		s = s[:60] + "…"
+	}
+	return s
+}
+
+func strOrDash(p *string) string {
+	if p == nil || *p == "" {
+		return "—"
+	}
+	return *p
 }
 
 // --- option builders ---

@@ -61,10 +61,50 @@ type ParametersView struct {
 	LangOptions     []SelectOption
 	CurrencyOptions []SelectOption
 	FieldErrors     map[string]string // settings field errors (after a 422)
+
+	// Security panel (self).
+	TOTPEnabled     bool
+	BackupRemaining int
+	Sessions        []SessionRow
+
+	// Users panel (admin only).
+	Users       []UserRow
+	Invitations []InvitationRow
 }
 
 // FieldError returns the localised settings error for a field, or "".
 func (v ParametersView) FieldError(field string) string { return v.FieldErrors[field] }
+
+// SessionRow is one active-session line in the Security panel.
+type SessionRow struct {
+	ID       int64
+	Device   string
+	IP       string
+	LastSeen string
+	Current  bool
+}
+
+// UserRow is one account line in the admin Users panel.
+type UserRow struct {
+	ID          int64
+	Email       string
+	RoleLabel   string
+	RoleClass   string
+	StatusLabel string
+	StatusClass string
+	IsSelf      bool
+	Deactivated bool
+	TOTPEnabled bool
+}
+
+// InvitationRow is one invitation line in the admin Users panel.
+type InvitationRow struct {
+	ID          int64
+	Email       string
+	StatusLabel string
+	StatusClass string
+	Pending     bool
+}
 
 // AccountFormView backs the create/edit account modal fragment.
 type AccountFormView struct {

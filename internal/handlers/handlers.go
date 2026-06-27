@@ -113,15 +113,31 @@ func (h *Handlers) LoginPost(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if res.TwoFactor {
+		// Password correct, account has 2FA: show the code step (no session yet).
+		v := view.AuthView{Base: h.base(r), Title: "login", TOTPStep: true, Pending: res.Pending}
+		h.render(w, http.StatusOK, "login", v)
+		return
+	}
 	h.startSession(w, res)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// LoginTOTP is the stubbed 2FA step (built in increment 8).
+// LoginTOTP completes the inline 2FA step: it verifies the TOTP/backup code
+// against the signed pending token and opens the session (functional/01 §3).
 func (h *Handlers) LoginTOTP(w http.ResponseWriter, r *http.Request) {
-	lang := middleware.From(r.Context()).Lang
-	v := view.AuthView{Base: h.base(r), Title: "login", GenericError: h.rdr.Catalog().T(lang, "login.totp_not_enabled")}
-	h.render(w, http.StatusNotImplemented, "login", v)
+	_ = r.ParseForm()
+	pending := r.PostFormValue("pending")
+	code := r.PostFormValue("code")
+	res, err := h.svc.CompleteTOTPLogin(r.Context(), pending, code, h.clientIP(r))
+	if err != nil {
+		lang := middleware.From(r.Context()).Lang
+		v := view.AuthView{Base: h.base(r), Title: "login", TOTPStep: true, Pending: pending, GenericError: h.rdr.Catalog().T(lang, "login.totp.error")}
+		h.render(w, http.StatusUnauthorized, "login", v)
+		return
+	}
+	h.startSession(w, res)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // Logout revokes the current session.

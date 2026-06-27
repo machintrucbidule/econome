@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"time"
 
 	"econome/internal/domain"
 	"econome/internal/repo"
@@ -75,6 +76,10 @@ func (s *Service) IsCreated(ctx context.Context, userID int64, period string) (b
 func (s *Service) CurrentPeriod() string {
 	return s.today().Period()
 }
+
+// Now exposes the service clock (UTC) for handlers needing the current time
+// (e.g. deriving an invitation's expired/pending state on read).
+func (s *Service) Now() time.Time { return s.now().UTC() }
 
 // BuildDraft computes the editable draft for a not-yet-created period, applying
 // the user's per-envelope amount overrides, and returns it with every figure

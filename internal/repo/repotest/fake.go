@@ -8,6 +8,7 @@ package repotest
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 
@@ -169,6 +170,105 @@ func (f fakeUsers) UpdatePasswordHash(_ context.Context, _ repo.DBTX, id int64, 
 	return nil
 }
 
+func (f fakeUsers) CountActiveAdmins(_ context.Context, _ repo.DBTX) (int, error) {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	n := 0
+	for _, u := range f.d.users {
+		if u.IsAdmin && u.Status == domain.StatusActive {
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (f fakeUsers) ListAll(_ context.Context, _ repo.DBTX) ([]domain.User, error) {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	ids := make([]int64, 0, len(f.d.users))
+	for id := range f.d.users {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	out := make([]domain.User, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, f.d.users[id])
+	}
+	return out, nil
+}
+
+func (f fakeUsers) SetPassword(_ context.Context, _ repo.DBTX, id int64, hash string, mustChange bool) error {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	u, ok := f.d.users[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.PasswordHash = hash
+	u.MustChangePassword = mustChange
+	u.UpdatedAt = time.Now().UTC()
+	f.d.users[id] = u
+	return nil
+}
+
+func (f fakeUsers) UpdateEmail(_ context.Context, _ repo.DBTX, id int64, email string) error {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	for _, ex := range f.d.users {
+		if ex.Email == email && ex.ID != id {
+			return domain.ErrDuplicate
+		}
+	}
+	u, ok := f.d.users[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.Email = email
+	u.UpdatedAt = time.Now().UTC()
+	f.d.users[id] = u
+	return nil
+}
+
+func (f fakeUsers) UpdateTOTP(_ context.Context, _ repo.DBTX, id int64, enabled bool, secret *string) error {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	u, ok := f.d.users[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.TOTPEnabled = enabled
+	u.TOTPSecret = secret
+	u.UpdatedAt = time.Now().UTC()
+	f.d.users[id] = u
+	return nil
+}
+
+func (f fakeUsers) UpdateStatus(_ context.Context, _ repo.DBTX, id int64, status domain.Status) error {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	u, ok := f.d.users[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.Status = status
+	u.UpdatedAt = time.Now().UTC()
+	f.d.users[id] = u
+	return nil
+}
+
+func (f fakeUsers) SetAdmin(_ context.Context, _ repo.DBTX, id int64, isAdmin bool) error {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	u, ok := f.d.users[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.IsAdmin = isAdmin
+	u.UpdatedAt = time.Now().UTC()
+	f.d.users[id] = u
+	return nil
+}
+
 type fakeSessions struct{ d *data }
 
 func (f fakeSessions) Create(_ context.Context, _ repo.DBTX, s *domain.Session) (int64, error) {
@@ -195,6 +295,41 @@ func (f fakeSessions) GetByTokenHash(_ context.Context, _ repo.DBTX, tokenHash s
 		}
 	}
 	return nil, domain.ErrNotFound
+}
+
+func (f fakeSessions) ListByUser(_ context.Context, _ repo.DBTX, userID int64) ([]domain.Session, error) {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	var out []domain.Session
+	for _, s := range f.d.sessions {
+		if s.UserID == userID {
+			out = append(out, s)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID > out[j].ID })
+	return out, nil
+}
+
+func (f fakeSessions) DeleteByUserScoped(_ context.Context, _ repo.DBTX, userID, id int64) error {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	s, ok := f.d.sessions[id]
+	if !ok || s.UserID != userID {
+		return domain.ErrNotFound
+	}
+	delete(f.d.sessions, id)
+	return nil
+}
+
+func (f fakeSessions) DeleteByUserExcept(_ context.Context, _ repo.DBTX, userID, keepID int64) error {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	for id, s := range f.d.sessions {
+		if s.UserID == userID && id != keepID {
+			delete(f.d.sessions, id)
+		}
+	}
+	return nil
 }
 
 func (f fakeSessions) Touch(_ context.Context, _ repo.DBTX, id int64, lastSeen, expires time.Time) error {
