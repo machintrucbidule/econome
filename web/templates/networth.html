@@ -81,7 +81,7 @@
 {{/* One snapshot-table row. Receives an NWLine. */}}
 {{define "nw-line"}}
 <tr{{if .RowClass}} class="{{.RowClass}}"{{end}}>
-  <td>{{if .DotColor}}<span class="dot" style="background:{{.DotColor}}"></span>{{.Label}}{{else if .Indent}}<span style="padding-left:30px">{{.Label}}</span> <span class="ann">{{.Ann}}</span>{{else}}{{.Label}}{{end}}</td>
+  <td>{{if .DotColor}}<span class="dot" style="background:{{.DotColor}}"></span>{{.Label}}{{if and .Editable .HasSnapshot}}<button class="snapdel" type="button" title="{{.DelTitle}}" hx-delete="/snapshots/{{.SnapshotID}}?period={{.Period}}" hx-target="#nw-table" hx-swap="outerHTML">✕</button>{{end}}{{else if .Indent}}<span style="padding-left:30px">{{.Label}}</span> <span class="ann">{{.Ann}}</span>{{else}}{{.Label}}{{end}}</td>
   {{if .Editable}}
     <td class="n val e fill" data-action="nw-edit" data-account="{{.AccountID}}" data-period="{{.Period}}" data-snap="{{if .HasSnapshot}}{{.SnapshotID}}{{end}}" tabindex="0"><span class="vt">{{.ValueStr}}</span></td>
   {{else}}

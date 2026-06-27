@@ -24,7 +24,7 @@ func TestNetWorthRendersAndRecomputes(t *testing.T) {
 	ts, client := setupOwner(t)
 	base := ts.URL
 	la := mkAccountID(t, base, client, "Livret A", "passbook", "none")
-	mkAccountID(t, base, client, "PEA", "securities", "none")
+	pea := mkAccountID(t, base, client, "PEA", "securities", "none")
 
 	page := getBody(t, client, base, "/networth?period=2026-06")
 	for _, want := range []string{"Patrimoine total", "Commentaire du mois", "Livret A", "PEA net", "Synthèse"} {
@@ -53,6 +53,30 @@ func TestNetWorthRendersAndRecomputes(t *testing.T) {
 	if !strings.Contains(page, "200,00") {
 		t.Errorf("synthèse missing the +200,00 month delta")
 	}
+	// A second support → the "Le reste" card appears (Total + livret + le reste),
+	// and editable rows carry the explicit delete ✕ (I-037/I-035, D4 choices).
+	_ = bodyOf(t, snapshotPost(t, base, client, pea, "2026-06", "12000"))
+	page = getBody(t, client, base, "/networth?period=2026-06")
+	if !strings.Contains(page, "Le reste") {
+		t.Errorf("synthèse missing the \"Le reste\" card")
+	}
+	if !strings.Contains(page, "snapdel") {
+		t.Errorf("editable snapshot row missing the delete ✕")
+	}
+
+	// The ✕ deletes the snapshot (L7) and recomputes. CSRF rides the header (the
+	// htmx hx-delete inherits the .app hx-headers; Go does not parse a DELETE body).
+	tok := csrfToken(t, client, base, "/networth?period=2026-06")
+	req, _ := http.NewRequest(http.MethodDelete, base+"/snapshots/1?period=2026-06", nil)
+	req.Header.Set("X-CSRF-Token", tok)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("DELETE snapshot: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("DELETE snapshot = %d", resp.StatusCode)
+	}
+	_ = bodyOf(t, resp)
 }
 
 func TestNetWorthCommentSharedWithRegister(t *testing.T) {

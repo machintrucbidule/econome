@@ -225,8 +225,9 @@
     var closed = false;
     var done = function (commit) {
       if (closed) return; closed = true;
-      if (commit) nwSave(cell, inp.value);
-      else if (inp.parentNode) cell.replaceChild(span, inp);
+      // On commit, the htmx swap replaces the whole table; if nothing was sent
+      // (empty value — deletion is the explicit ✕), restore the original span.
+      if (!commit || !nwSave(cell, inp.value)) { if (inp.parentNode) cell.replaceChild(span, inp); }
     };
     inp.addEventListener("blur", function () { done(true); });
     inp.addEventListener("keydown", function (e) {
@@ -235,17 +236,13 @@
     });
   }
   function nwSave(cell, raw) {
-    var tbl = document.getElementById("nw-table"); if (!tbl || !window.htmx) return;
+    if (raw.trim() === "") return false; // empty → revert; deletion is via the ✕ button
+    var tbl = document.getElementById("nw-table"); if (!tbl || !window.htmx) return false;
     var csrf = tbl.getAttribute("data-csrf");
-    var acct = cell.getAttribute("data-account"), period = cell.getAttribute("data-period"), snap = cell.getAttribute("data-snap");
-    if (raw.trim() === "") {
-      if (snap) window.htmx.ajax("DELETE", "/snapshots/" + snap + "?period=" + encodeURIComponent(period),
-        { target: "#nw-table", swap: "outerHTML", headers: { "X-CSRF-Token": csrf } });
-      else if (window.htmx) window.location.reload(); // nothing to delete → revert via reload
-      return;
-    }
+    var acct = cell.getAttribute("data-account"), period = cell.getAttribute("data-period");
     window.htmx.ajax("POST", "/snapshots",
       { values: { account_id: acct, period: period, gross_value: raw, _csrf: csrf }, target: "#nw-table", swap: "outerHTML" });
+    return true;
   }
   function nwComment(cell) {
     var span = cell.querySelector(".ct");

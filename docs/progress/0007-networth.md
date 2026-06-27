@@ -105,14 +105,19 @@ and the pre-release hardening pass. Demo **D5** + the M4 pre-release pass follow
 deliverable — author `specifications/prompts/stage-8-dsp2-import-spec.md`. **Awaiting the user's go-ahead**
 (`G15`) and the **D4** running-build demo.
 
-## Open points
+## Open points — D4 checkpoint resolutions
+
+The D4 discussion resolved every inc-7-specific open point (user-chosen):
 
 - **O-21 RESOLVED** (I-038): savings accounts gain the Patrimoine destination; the budget rails list them.
-- **O-25 (M25 thresholds + card rule provisional).** The intensity bands (I-036) and the metric-card
-  selection (I-037) are chosen defaults — **to confirm/retune with the user at demo D4**.
-- **No Synthèse per-row delete button.** Deletion (L7) is reachable by **clearing a value cell to empty**
-  (→ `DELETE /snapshots/{id}`); a number incl. `0` is a valid gross. The mockup has no delete affordance,
-  so none was invented; the `DELETE` route is service- + e2e-tested.
+- **O-25 RESOLVED** at D4 — **M25 bands** are now **absolute euros** (I-036): |Δ| ≥ 100 € to list,
+  `[100,300) → +`, `[300,750) → ++`, `≥ 750 → +++`. **Cards** (I-037): **Total + the two biggest livrets +
+  "Le reste"** (one card summarising every other support incl. PEA net) — no support is ever silently
+  dropped.
+- **Snapshot delete** is now an **explicit per-row ✕** (`hx-delete`, I-035); clearing a cell reverts.
+  Service- + e2e-tested.
+- **O-22 RESOLVED** (I-039): the forecast inline `Prévu` edit is enabled in the **aggregated** scope too
+  (each flat row maps to one envelope); e2e asserts the `amt-inp` + `hx-patch`.
 - The Registre curve assigns securities a dashed stroke and cycles a small palette for other supports
   (the mockup's exact per-support colours are illustrative); legend reflects the actual series.
 - **O-16/O-17/O-18/O-19/O-24** carry forward unchanged (opening-balance column; snapshots-at-init for

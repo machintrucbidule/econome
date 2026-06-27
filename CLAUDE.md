@@ -141,8 +141,11 @@ and **Registre** (`GET /register`: the server-rendered multi-series evolution cu
 mutations `POST /snapshots` (upsert by (account, period), empty value → `DELETE /snapshots/{id}`),
 `PUT /networth/{period}/comment`. Engine consumed unchanged; added full-history repo readers
 (`Snapshot/NetworthMonth.ListByUser`) + `networthInputs`. Resolves **O-21** (forecast/journal rails gain
-an Épargne section → Patrimoine). Decisions **I-035** (read path + snapshot edit shape), **I-036** (M25
-intensity bucketing), **I-037** (card selection), **I-038** (rail). See `docs/progress/0007-networth.md`.
+an Épargne section → Patrimoine). **D4 resolved every inc-7 open point** (user-chosen): **I-036** M25 bands
+now absolute € (≥100 € floor · 100/300/750 → +/++/+++), **I-037** cards = Total + 2 biggest livrets + "Le
+reste", **I-035** snapshot delete = explicit per-row ✕ (clear = revert), **I-039** O-22 resolved (forecast
+inline `Prévu` now editable in the aggregated scope too). Decisions **I-035..I-039**, **I-038** (rail).
+See `docs/progress/0007-networth.md`.
 
 **Next: increment 8 — Lifecycle, full auth, hardening (Milestone M4, release-ready)** (`development-plan/
 01-phased-plan.md`; `functional/04` §4 L1/L9, `functional/01` §4–§8, `technical/05`): month close/unlock
@@ -153,9 +156,8 @@ auth surface.** Demo **D5** + the M4 pre-release pass; then Stage 7's final deli
 `specifications/prompts/stage-8-dsp2-import-spec.md`. **Awaiting the user's go-ahead** (`G15`) and the
 **D4** running-build demo. Carried open points: **O-16** (no opening-balance column), **O-17**
 (snapshots-at-init for cascade-full), **O-18** (the close increment's sweep txn — due now), **O-19**
-(`e2e chrome smoke` flake, mitigated by `WSURLReadTimeout`), **O-22** (inline `Prévu` edit per-account
-scope only), **O-24** (`PairInternalTransfer` one-row-vs-two-leg, DSP2-only), **O-25** (M25 thresholds +
-card rule provisional — retune at D4).
+(`e2e chrome smoke` flake, mitigated by `WSURLReadTimeout`), **O-24** (`PairInternalTransfer`
+one-row-vs-two-leg, DSP2-only). **O-21/O-22/O-25 RESOLVED at D4** (see above).
 
 > Reminders: `main` is protected — all changes via PR → CI green → merge; required checks now include
 > `e2e chrome smoke` (O-7 resolved). Dependabot minor/patch auto-merge on green, majors manual (I-008).

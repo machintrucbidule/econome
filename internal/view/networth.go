@@ -43,6 +43,7 @@ type NWLine struct {
 	Period      string
 	SnapshotID  int64
 	HasSnapshot bool
+	DelTitle    string
 	DotColor    string
 	Ann         string // "− 17,2 % sur gains" on the PEA net row
 	Indent      bool

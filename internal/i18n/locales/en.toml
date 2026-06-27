@@ -426,6 +426,8 @@
 "networth.card.total_help" = "Sum of all savings supports. The PEA counts at its net value (after social charges on gains)."
 "networth.card.pea" = "PEA net"
 "networth.card.pea_help" = "PEA net value = initial deposit + gains × (1 − rate). Only the gross value is entered."
+"networth.card.rest" = "The rest"
+"networth.card.rest_help" = "All other savings supports (PEA net included) beyond the two passbooks shown alongside."
 "networth.cap.full" = "cap reached"
 "networth.cap.near" = "near the cap"
 "networth.cap.pct" = "{0}% of the cap"

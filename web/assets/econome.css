@@ -365,6 +365,10 @@ tbody tr.frow:hover{background:var(--brand-soft)}
 .ptable .sub-row td{background:var(--sunk);font-weight:700}
 .ptable .tot-row td{background:var(--brand-soft);font-weight:800;border-top:2px solid var(--line)}
 .ann{color:var(--faint);font-size:11.5px;font-weight:600;margin-left:6px}
+/* per-row snapshot delete (L7) — faint ✕ revealed on row hover/focus */
+.snapdel{border:0;background:none;color:var(--faint);cursor:pointer;font-size:12px;margin-left:8px;padding:0 4px;border-radius:5px;opacity:0;transition:opacity .12s,color .12s,background .12s}
+.ptable tr:hover .snapdel,.ptable .snapdel:focus-visible{opacity:1}
+.snapdel:hover{color:var(--bad);background:var(--bad-soft)}
 /* month comment box */
 .commentbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:18px}
 .commentbox .ch{display:flex;align-items:center;gap:8px;margin-bottom:10px}

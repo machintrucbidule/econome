@@ -427,6 +427,8 @@
 "networth.card.total_help" = "Somme de tous les supports d'épargne. Le PEA compte pour sa valeur nette (après prélèvements sociaux sur les gains)."
 "networth.card.pea" = "PEA net"
 "networth.card.pea_help" = "Valeur nette du PEA = dépôt initial + gains × (1 − taux). Seule la valeur brute est saisie."
+"networth.card.rest" = "Le reste"
+"networth.card.rest_help" = "Tous les autres supports d'épargne (PEA net inclus) hors les deux livrets affichés ci-contre."
 "networth.cap.full" = "plafond atteint"
 "networth.cap.near" = "proche du plafond"
 "networth.cap.pct" = "{0}% du plafond"

@@ -487,9 +487,18 @@ func clipRange(periodsAsc []string, rangeKey string) []string {
 	return periodsAsc
 }
 
+// M25 auto-prefill bands (I-036, user-chosen at D4): a movement is listed when
+// |Δ| ≥ 100 € and graded by absolute magnitude — [100,300) € → +, [300,750) € →
+// ++, ≥ 750 € → +++ (same for losses). Minor units.
+const (
+	movFloor = 10000 // 100 € — below this a movement is not listed
+	movBand2 = 30000 // 300 €
+	movBand3 = 75000 // 750 €
+)
+
 // movements ranks the supports that moved this month for the M25 comment
-// auto-prefill (I-036): intensity is the magnitude relative to the month's
-// largest movement — ≥ 66 % → 3, ≥ 33 % → 2, > 0 → 1; largest first.
+// auto-prefill (I-036): each support's month-over-month Δ, filtered to ≥ 100 €,
+// graded by the absolute bands above, largest first.
 func movements(supports []NWSupport) []NWMovement {
 	type mv struct {
 		name string
@@ -497,7 +506,6 @@ func movements(supports []NWSupport) []NWMovement {
 		up   bool
 	}
 	var moved []mv
-	var maxMag int64
 	for _, sup := range supports {
 		if !sup.HasPrev || sup.Delta == 0 {
 			continue
@@ -507,12 +515,12 @@ func movements(supports []NWSupport) []NWMovement {
 		if mag < 0 {
 			mag = -mag
 		}
-		moved = append(moved, mv{name: sup.Name, mag: mag, up: up})
-		if mag > maxMag {
-			maxMag = mag
+		if mag < movFloor {
+			continue // below 100 € — too small to surface
 		}
+		moved = append(moved, mv{name: sup.Name, mag: mag, up: up})
 	}
-	if maxMag == 0 {
+	if len(moved) == 0 {
 		return nil
 	}
 	sort.SliceStable(moved, func(i, j int) bool { return moved[i].mag > moved[j].mag })
@@ -520,9 +528,9 @@ func movements(supports []NWSupport) []NWMovement {
 	for _, m := range moved {
 		intensity := 1
 		switch {
-		case m.mag*3 >= maxMag*2: // ≥ 66 %
+		case m.mag >= movBand3:
 			intensity = 3
-		case m.mag*3 >= maxMag: // ≥ 33 %
+		case m.mag >= movBand2:
 			intensity = 2
 		}
 		out = append(out, NWMovement{Name: m.name, Up: m.up, Intensity: intensity})

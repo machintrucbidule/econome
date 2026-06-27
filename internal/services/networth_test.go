@@ -237,10 +237,14 @@ func TestNetWorth_M25Prefill(t *testing.T) {
 	uid := miOwner(t, s)
 	la := mkAccount(t, s, uid, "Livret A", "passbook", "none")
 	pea := mkAccount(t, s, uid, "PEA", "securities", "none")
+	pee := mkAccount(t, s, uid, "PEE", "employee_savings", "none")
+	// Δ bands (I-036): [100,300)€ → +, [300,750)€ → ++, ≥750€ → +++; <100€ dropped.
 	snap(t, s, uid, la, "2026-05", 1000000)
-	snap(t, s, uid, la, "2026-06", 1100000) // +100 000
+	snap(t, s, uid, la, "2026-06", 1015000) // +150 € → +
 	snap(t, s, uid, pea, "2026-05", 1000000)
-	snap(t, s, uid, pea, "2026-06", 1300000) // net Δ = 300 000 × 0.828 = 248 400
+	snap(t, s, uid, pea, "2026-06", 1060000) // gross +600 €; net Δ = 60 000 × 0.828 = 496,80 € → ++
+	snap(t, s, uid, pee, "2026-05", 1000000)
+	snap(t, s, uid, pee, "2026-06", 1005000) // +50 € → below the floor, not listed
 
 	// Off by default: no movements computed.
 	if d, _ := s.NetWorthSynthesis(ctx, uid, "2026-06"); len(d.Movements) != 0 {
@@ -253,12 +257,12 @@ func TestNetWorth_M25Prefill(t *testing.T) {
 	}
 	d, _ := s.NetWorthSynthesis(ctx, uid, "2026-06")
 	if len(d.Movements) != 2 {
-		t.Fatalf("movements = %d, want 2", len(d.Movements))
+		t.Fatalf("movements = %d, want 2 (the +50 € PEE move is below the floor)", len(d.Movements))
 	}
-	if d.Movements[0].Name != "PEA" || d.Movements[0].Intensity != 3 || !d.Movements[0].Up {
-		t.Errorf("first movement = %+v, want PEA +++ up (largest)", d.Movements[0])
+	if d.Movements[0].Name != "PEA" || d.Movements[0].Intensity != 2 || !d.Movements[0].Up {
+		t.Errorf("first movement = %+v, want PEA ++ up (496,80 €, largest)", d.Movements[0])
 	}
-	if d.Movements[1].Name != "Livret A" || d.Movements[1].Intensity != 2 {
-		t.Errorf("second movement = %+v, want Livret A ++", d.Movements[1])
+	if d.Movements[1].Name != "Livret A" || d.Movements[1].Intensity != 1 {
+		t.Errorf("second movement = %+v, want Livret A + (150 €)", d.Movements[1])
 	}
 }

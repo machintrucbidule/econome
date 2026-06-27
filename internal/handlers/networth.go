@@ -175,8 +175,9 @@ func (h *Handlers) networthView(r *http.Request, d *services.NetWorthData) (view
 	return v, nil
 }
 
-// networthCards builds the four metric cards (I-037): Patrimoine total, the top
-// passbook livrets (by value), and PEA net.
+// networthCards builds the metric cards (I-037, user-chosen at D4): Patrimoine
+// total, the two biggest passbook livrets (by value), and a "Le reste" card
+// aggregating every other support (PEA net + further livrets + employee savings).
 func (h *Handlers) networthCards(base view.Base, d *services.NetWorthData) []view.NWCard {
 	cards := []view.NWCard{{
 		Label: base.T("networth.card.total"), Value: base.Money(d.Total), Mod: "hl",
@@ -184,40 +185,40 @@ func (h *Handlers) networthCards(base view.Base, d *services.NetWorthData) []vie
 		HasDelta: d.TotalHasPrev, DeltaStr: base.Money(absDelta(d.TotalDelta)),
 		DeltaPos: d.TotalDelta > 0, DeltaNeg: d.TotalDelta < 0,
 	}}
-	var pea *services.NWSupport
 	var livrets []services.NWSupport
-	for i := range d.Supports {
-		s := d.Supports[i]
+	supportsWithSnapshot := 0
+	for _, s := range d.Supports {
 		if !s.HasSnapshot {
 			continue
 		}
-		switch s.Type {
-		case domain.AccountSecurities:
-			pea = &d.Supports[i]
-		case domain.AccountPassbook:
+		supportsWithSnapshot++
+		if s.Type == domain.AccountPassbook {
 			livrets = append(livrets, s)
-		case domain.AccountCurrent, domain.AccountEmployeeSavings:
-			// current accounts are not savings supports; employee savings appear in
-			// the table but not as a metric card (I-037).
 		}
 	}
 	sortByValueDesc(livrets)
-	slots := 3
-	if pea != nil {
-		slots = 2
-	}
+	shown := 0
+	var shownValue, shownDelta int64
 	for i, lv := range livrets {
-		if i >= slots {
+		if i >= 2 {
 			break
 		}
 		cards = append(cards, h.livretCard(base, lv, d.NearCap))
+		shown++
+		shownValue += lv.Value
+		if lv.HasPrev {
+			shownDelta += lv.Delta
+		}
 	}
-	if pea != nil {
+	// "Le reste" — everything not individually carded (PEA net + the rest).
+	if supportsWithSnapshot > shown {
+		restValue := d.Total - shownValue
+		restDelta := d.TotalDelta - shownDelta
 		cards = append(cards, view.NWCard{
-			Label: base.T("networth.card.pea"), Value: base.Money(pea.Value), Mod: "good",
-			Help:     base.T("networth.card.pea_help"),
-			HasDelta: pea.HasPrev, DeltaStr: base.Money(absDelta(pea.Delta)),
-			DeltaPos: pea.Delta > 0, DeltaNeg: pea.Delta < 0,
+			Label: base.T("networth.card.rest"), Value: base.Money(restValue), Mod: "good",
+			Help:     base.T("networth.card.rest_help"),
+			HasDelta: d.TotalHasPrev, DeltaStr: base.Money(absDelta(restDelta)),
+			DeltaPos: restDelta > 0, DeltaNeg: restDelta < 0,
 		})
 	}
 	return cards
@@ -308,7 +309,7 @@ func (h *Handlers) supportLine(base view.Base, d *services.NetWorthData, s servi
 	return view.NWLine{
 		Kind: "support", Label: s.Name, DotColor: dot,
 		Editable: true, AccountID: s.AccountID, Period: d.Period,
-		SnapshotID: s.SnapshotID, HasSnapshot: s.HasSnapshot,
+		SnapshotID: s.SnapshotID, HasSnapshot: s.HasSnapshot, DelTitle: base.T("action.delete"),
 		ValueStr:  base.Amount(s.Gross),
 		DeltaStr:  deltaStr(base, s.Delta, s.HasPrev),
 		DeltaPos:  s.HasPrev && s.Delta > 0,
