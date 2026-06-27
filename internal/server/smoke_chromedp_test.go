@@ -86,7 +86,10 @@ func TestSmokeForecastRowExpand(t *testing.T) {
 		chromedp.WaitVisible(`.app`, chromedp.ByQuery),
 		chromedp.Navigate(ts.URL+"/?period=2026-06&scope="+fID),
 		chromedp.WaitVisible(`tr.tog`, chromedp.ByQuery),
-		chromedp.Click(`tr.tog`, chromedp.ByQuery),
+		// Click a read-only body cell of the row (the État badge) — econome.js owns
+		// row toggling for .tog rows; clicks on the inline Prévu input must not
+		// toggle. (O-23: the chevron is double-wired with app.js — forecast follow-up.)
+		chromedp.Click(`tr.tog .pill`, chromedp.ByQuery),
 		chromedp.Sleep(150*time.Millisecond),
 		chromedp.Evaluate(`document.querySelector('tr.drill').classList.contains('hidden')`, &drillHidden),
 	)
@@ -148,6 +151,58 @@ func TestSmokeForecastInlineEdit(t *testing.T) {
 	}
 	if !strings.Contains(panelText, "Solde insuffisant") {
 		t.Errorf("residual did not recompute to negative after dropping income: %q", panelText)
+	}
+}
+
+// TestSmokeJournalQuickEntry proves the journal quick-entry works in a real
+// browser under the app's CSP: the custom category select (econome.js emMenu,
+// CSP-clean) picks a category, and [+] posts via htmx, appending the row.
+func TestSmokeJournalQuickEntry(t *testing.T) {
+	ts, client := setupOwner(t)
+	base := ts.URL
+	fID := mkAccountID(t, base, client, "Fortuneo", "current", "sweep")
+	mkEnvHTTP(t, base, client, url.Values{
+		"name": {"Courses"}, "flow_type": {"expense"}, "account_id": {fID},
+		"mode": {"variable"}, "default_amount": {"600,00"},
+	})
+	tok := csrfToken(t, client, base, "/config/parameters")
+	bodyOf(t, formReq(t, client, "POST", base+"/month-init?period=2026-06", url.Values{"_csrf": {tok}}))
+
+	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true),
+			chromedp.WSURLReadTimeout(45*time.Second))...)
+	defer cancelAlloc()
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+	ctx, cancelT := context.WithTimeout(ctx, 50*time.Second)
+	defer cancelT()
+
+	var jbodyText string
+	err := chromedp.Run(
+		ctx,
+		chromedp.Navigate(ts.URL+"/login"),
+		chromedp.WaitVisible(`#email`, chromedp.ByID),
+		chromedp.SendKeys(`#email`, "owner@example.org", chromedp.ByID),
+		chromedp.SendKeys(`#password`, "Tr0ub4dour&3xtra", chromedp.ByID),
+		chromedp.Submit(`#password`, chromedp.ByID),
+		chromedp.WaitVisible(`.app`, chromedp.ByQuery),
+		chromedp.Navigate(ts.URL+"/journal?period=2026-06&scope=all"),
+		chromedp.WaitVisible(`#qform`, chromedp.ByID),
+		// Pick a category via the custom select (emMenu, CSP-clean).
+		chromedp.Click(`#q-cat`, chromedp.ByID),
+		chromedp.WaitVisible(`.em-menu .opt`, chromedp.ByQuery),
+		chromedp.Click(`.em-menu .opt`, chromedp.ByQuery),
+		chromedp.SendKeys(`#q-label`, "Boulangerie test", chromedp.ByID),
+		chromedp.SendKeys(`#q-amt`, "4,20", chromedp.ByID),
+		chromedp.Click(`#qform .addbtn`, chromedp.ByQuery),
+		chromedp.Sleep(400*time.Millisecond),
+		chromedp.Text(`#jbody`, &jbodyText, chromedp.ByID),
+	)
+	if err != nil {
+		t.Fatalf("chromedp journal smoke: %v", err)
+	}
+	if !strings.Contains(jbodyText, "Boulangerie test") {
+		t.Errorf("quick-entry row not appended: %q", jbodyText)
 	}
 }
 

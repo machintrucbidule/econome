@@ -202,3 +202,104 @@ inline-edit scope M23, atomic delete L8). Specs `functional/06`, `functional/04`
 - The `POST /transfers/end-of-month` happy path is **service-tested** (needs cleared movements); the e2e only
   asserts the route + guard, because cleared transactions require the Journal (6c). The chromedp/e2e happy
   path lands once the Journal can realise movements.
+
+---
+
+## 6c — Journal (entry journal) — DONE
+
+**Date.** 2026-06-27 · **Status.** complete, all gates green; awaiting the user's go-ahead before 6d.
+
+The flat data-entry screen that feeds **all** actuals (`functional/06`). Delivered as **one PR** (user's
+choice). Derived-not-stored: only transaction rows are written; the summary + every figure derive on read.
+
+### What was built
+
+- **Quick-entry bar (create-only, M20).** `POST /transactions` → `Service.CreateTransaction`: `ensureEditable`
+  + validation (`amount ≠ 0`; category required unless transfer; transfer `dest ≠ account`), `flow` from the
+  category (or transfer), **signed amount** via `signedAmount` (expense/transfer negative, income positive,
+  I-031), `budget_period` from the date (date/period decoupling), explicit status (default `cleared`),
+  account-from-category server prefill (I-033). The custom selects reuse the validated `econome.js` widgets;
+  `selSet` ported to `app.js`; option sets delivered as inert `<script type="application/json">` (CSP-safe).
+- **Table + server-side sort/filter.** `GET /journal` / `GET /journal/rows` (htmx body re-render + OOB
+  summary). Sort (date/period/label/cat/acct/amount/status; **default date desc, undated awaited last**, M19);
+  filters (search, category, status chips, transfers toggle, M18) — `f`-prefixed params + a `filtered=1`
+  sentinel (I-033); view-only, never mutating. Columns `Date | Période | Libellé | Catégorie | Compte |
+  Montant | Statut` with the `~JJ/MM`/`—` date display and the `Période` highlight when it differs from the
+  date's month.
+- **Whole-cell inline edit (M22).** `PATCH /transactions/{id}` (one field) → `Service.UpdateTransaction`:
+  `ensureEditable` (source **and** the new period on a `budget_period` change), the **date↔status**
+  consistency (date set → `cleared`, date cleared → `awaited`, §4), direct status edit, re-sign on an
+  amount/category change, and the **transfer inline scope** (M23 — category/account fixed → 409). Wired
+  CSP-clean: `app.js` opens the right widget on `data-action="j-edit"` and fires the htmx PATCH (row + OOB
+  summary).
+- **Right panel (M18).** *Résumé du mois* (revenus reçus, dépenses réelles = cleared+pending C7, en attente +
+  count, attendu à venir + count, solde net — **transfers excluded**, rules §10) + *Filtres*.
+- **Delete (L8).** `DELETE /transactions/{id}` → a manual transfer is a single two-legged row; deleting
+  removes it (both balance legs). Row removed via `hx-swap="delete"` + OOB summary.
+- **States + locked guard.** Not-created / empty / locked; every mutation funnels through `ensureEditable`
+  (→409); quick-entry + inline edits render only on an active month.
+- **CSS port.** The journal-only classes from the mockup's page `<style>` (`.jtable`/`.statpill`/`.catpill`/
+  `.srt`/`.panel-card`/`.flab`/`.vtext`/`.stcell`/`.actcol`/`.chip-period`/`.ltext`/`.sk-row`) promoted into
+  `web/assets/econome.css` + a regression test (guards the #24 class regression).
+
+### Specs satisfied
+
+`functional/06` (whole, minus the autocomplete deferred to 6d), `functional/04` §3.5 (transaction CRUD), §6
+(recalc matrix), §7 (single-row date-fill reconciliation), `rules` §10 (transfer neutralisation),
+`technical/04` §1/§3.3/§4. Decisions **I-033** (reuses I-031). No schema change.
+
+**Scope boundary vs 6d.** 6c does the full CRUD + the **single-row** date↔status consistency. The
+`engine.Reconcile` matching orchestration (a new movement finding its awaited twin), label **autocomplete**
+(`/api/labels` + `label_mapping`), and `ui_preference` expand are **6d** — so the label field is plain text
+here.
+
+### Tests passing
+
+- **Service integration** (`journal_test.go`, pinned clock): create (signed amounts, period-from-date,
+  summary = income/real(cleared+pending)/pending+count/awaited+count/net, transfers excluded); validation
+  (amount 0 / no category / transfer-self → 422; locked → 409); inline edit (date-fill→cleared,
+  clear-date→awaited, status, amount re-sign, transfer scope 409); delete; sort (date desc, undated last) +
+  filters (category/status/search).
+- **e2e backbone** (`journal_e2e_test.go`): not-created state; created month renders the quick-entry + table
+  + summary; quick-entry POST appends a row + OOB summary; inline status PATCH → row + summary; `GET
+  /journal/rows` re-render; DELETE removes the row (CSRF via header — Go does not parse a DELETE body).
+- **chromedp smoke**: quick-entry via the **CSP-clean custom category select** (`emMenu`) + `[+]` htmx create
+  appends the row.
+- **CSS regression** (`TestJournalStylesheetDefinesClasses`).
+- Full suite + `gofumpt -l` + `go vet` (incl. `-tags chromedp`) + `golangci-lint` + `govulncheck` clean;
+  engine coverage 91.7 % holds (engine untouched).
+
+### Verification (G8)
+
+Conformance checklist: derived-not-stored (only transaction rows written; summary/figures derived); tenant
+scoping (userID from context; `user_id`-scoped repos; cross-tenant → 404); integer minor units + banker's
+rounding, no float on money; exhaustive enum `switch` (status); recalc matrix honoured (row + OOB summary; the
+forecast recomputes on its next read); **locked-month guard on every mutation** (source + target period on a
+`budget_period` move, 409); **DSP2 seam intact** (manual single-row transfer + `source=manual` + the
+awaited↔cleared single-row path are exactly what import will drive; the `engine.Reconcile` matching +
+`external_ref` dedup land in 6d, no reshape). Targeted subagent review not mandatory for 6c (no
+engine/reconcile/auth change).
+
+### Exact next step
+
+**6d — reconciliation orchestration** (`functional/04` §7, `06` §4): the service calls the **pure
+`engine.Reconcile`/`PairTransfer`** (increment 2) to match a new cleared movement to its awaited twin
+(edit-in-place, no duplicate L6, amount variance → residual), internal-transfer auto-pairing; plus
+**`label_mapping`** (account-from-category prefill refinement + `GET /api/labels` autocomplete, M21) and
+**`ui_preference`** (`PUT /ui/expand` per-user expand persistence, M4). **Mandatory subagent review on the
+reconciliation path.** Then close-out (`0006-budget-core.md` final) + demo **D3**. Specs `functional/04` §7,
+`functional/06` §4/§5, `technical/04` §3.3/§3.5, `technical/03` §5.1/§5.2. **Awaiting the user's go-ahead**
+(`G15`).
+
+### Open points
+
+- **O-23 (forecast chevron double-wired).** The validated `econome.js` wires `.tog`/`.chev` row toggling at
+  load (its own element listeners); the forecast's `app.js` `toggle-row` delegation (needed for htmx-swapped
+  rows) **also** fires, so clicking the **chevron** specifically is a no-op (econome.js `stopPropagation`s it
+  with no `data-k`) and a second close-click glitches. Row-**body** clicks work (the path 6a/6b/6c smokes
+  use). Pre-existing since 6a (not introduced by 6c); a focused forecast follow-up should make `app.js`
+  delegation the sole toggler (e.g. give the chev `data-k` for econome.js, or move the rows off the `.tog`
+  class). The Journal is unaffected (its rows are not `.tog`).
+- **Autocomplete + reconciliation matching deferred to 6d** (per plan): the label field is plain text; a
+  quick-entry create does not auto-match an existing awaited row.
+- **Account-from-category prefill** is the category's first active envelope account, not usage-ranked (I-033).

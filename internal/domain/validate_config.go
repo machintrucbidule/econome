@@ -45,6 +45,14 @@ const (
 	// Month-initialisation assistant (functional/09).
 	MsgPeriodInvalid = "validation.period.invalid"
 
+	// Journal transactions (functional/06, functional/04 §3.5).
+	MsgStatusInvalid    = "validation.txn.status"
+	MsgDateInvalid      = "validation.txn.date"
+	MsgCategoryRequired = "validation.txn.category_required"
+	MsgCategoryInvalid  = "validation.txn.category"
+	MsgAccountInvalid   = "validation.txn.account"
+	MsgFieldInvalid     = "validation.txn.field"
+
 	// Transfer-envelope destination (T11, functional/09 §3.4).
 	MsgDestRequired    = "validation.envelope.dest_required"
 	MsgDestNotAllowed  = "validation.envelope.dest_not_allowed"

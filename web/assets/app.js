@@ -80,11 +80,129 @@
     }
   }
 
+  /* ---- Journal (increment 6c) — quick-entry + inline editing wired to the
+     CSP-clean econome.js widgets + htmx. selSet is ported here (not in the
+     never-edited econome.js). ---- */
+  window.selSet = function (btn, value, label, ph) {
+    if (!btn) return;
+    btn.dataset.value = value == null ? "" : value;
+    var lab = btn.querySelector(".lab"); if (lab) lab.textContent = label;
+    btn.classList.toggle("ph", ph === true);
+  };
+  function jData(id) { var el = document.getElementById(id); if (!el) return []; try { return JSON.parse(el.textContent) || []; } catch (e) { return []; } }
+  function jCats() { return jData("j-cats"); }
+  function jAccts() { return jData("j-accts"); }
+  function jStatuses() { return jData("j-status"); }
+  function setHidden(id, v) { var h = document.getElementById(id); if (h) h.value = v == null ? "" : v; }
+  function fireChange(el) { if (el) el.dispatchEvent(new Event("change", { bubbles: true })); }
+  function acctLabel(id) { var a = jAccts().filter(function (x) { return x.value === String(id); })[0]; return a ? a.label : String(id); }
+
+  /* quick-entry / filter custom-select trigger */
+  function jPick(btn) {
+    var kind = btn.getAttribute("data-kind"), targetId = btn.getAttribute("data-target");
+    if (kind === "date") {
+      window.emCal(btn, btn.dataset.value || "", function (v) { window.selSet(btn, v, v || "(date)"); setHidden(targetId, v); });
+      return;
+    }
+    var opts, current = btn.dataset.value || "";
+    if (kind === "cat") opts = jCats();
+    else if (kind === "fcat") opts = [{ value: "", label: (btn.querySelector(".lab") || {}).textContent || "—" }].concat(jCats().filter(function (o) { return o.value !== "transfer"; }));
+    else if (kind === "acct") opts = jAccts();
+    else if (kind === "status") opts = jStatuses();
+    else return;
+    window.emMenu(btn, opts, current, function (v, l, o) {
+      window.selSet(btn, v, l, kind === "cat" && v === "");
+      setHidden(targetId, v);
+      if (kind === "cat") jCatChosen(o);
+      if (kind === "fcat") fireChange(document.getElementById(targetId));
+    });
+  }
+  function jCatChosen(o) {
+    if (!o) return;
+    var flow = o.value === "transfer" ? "transfer" : (o.flow || "expense");
+    setHidden("q-flow-v", flow);
+    if (flow === "transfer") setHidden("q-cat-v", "");
+    var dw = document.getElementById("q-dest-wrap"); if (dw) dw.classList.toggle("hidden", flow !== "transfer");
+    if (flow !== "transfer" && o.acct) {
+      var ab = document.getElementById("q-acct");
+      if (ab) { window.selSet(ab, o.acct, acctLabel(o.acct)); setHidden("q-acct-v", o.acct); }
+    }
+  }
+
+  /* inline cell editing → htmx PATCH /transactions/:id */
+  function jPatch(id, field, value) {
+    var jb = document.getElementById("jbody"); if (!jb || !window.htmx) return;
+    var vals = {}; vals[field] = value;
+    window.htmx.ajax("PATCH", "/transactions/" + id + "?period=" + encodeURIComponent(jb.dataset.period) + "&scope=" + encodeURIComponent(jb.dataset.scope),
+      { values: vals, target: "#jrow-" + id, swap: "outerHTML" });
+  }
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function jEdit(cell) {
+    var kind = cell.getAttribute("data-edit"), id = cell.getAttribute("data-id");
+    if (kind === "op_date") {
+      var cur = (cell.textContent || "").replace("~", "").trim(); if (!/^\d{2}\/\d{2}$/.test(cur)) cur = "";
+      window.emCal(cell, cur, function (v) { jPatch(id, "op_date", v); });
+    } else if (kind === "budget_period") {
+      var per = cell.getAttribute("data-period") || "", m = parseInt(per.slice(5), 10) - 1, y = parseInt(per.slice(0, 4), 10);
+      window.emMonth(cell, m, y, function (i, label, year) { jPatch(id, "budget_period", year + "-" + pad2(i + 1)); });
+    } else if (kind === "category_id") {
+      window.emMenu(cell, jCats().filter(function (o) { return o.value !== "transfer"; }), cell.getAttribute("data-cat"), function (v) { jPatch(id, "category_id", v); });
+    } else if (kind === "account_id") {
+      window.emMenu(cell, jAccts(), cell.getAttribute("data-acct"), function (v) { jPatch(id, "account_id", v); });
+    } else if (kind === "status") {
+      window.emMenu(cell, jStatuses(), cell.getAttribute("data-status"), function (v) { jPatch(id, "status", v); });
+    } else if (kind === "label") {
+      jInlineText(cell, "label", id, cell.querySelector(".ltext"));
+    } else if (kind === "amount") {
+      jInlineText(cell, "amount", id, cell.querySelector(".vtext"));
+    }
+  }
+  function jInlineText(cell, field, id, span) {
+    if (!span || cell.querySelector("input")) return;
+    var raw = field === "amount" ? span.textContent.replace(/[^\d.,]/g, "") : span.textContent;
+    var inp = document.createElement("input"); inp.className = field === "amount" ? "amt-inp" : "lbl-inp"; inp.value = raw;
+    cell.replaceChild(inp, span); inp.focus(); inp.select();
+    var closed = false;
+    var done = function (commit) {
+      if (closed) return; closed = true;
+      if (commit) jPatch(id, field, inp.value);
+      else if (inp.parentNode) cell.replaceChild(span, inp);
+    };
+    inp.addEventListener("blur", function () { done(true); });
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+      else if (e.key === "Escape") { done(false); }
+    });
+  }
+  function jSort(th) {
+    var col = th.getAttribute("data-col"), fs = $("#f-sort"), fd = $("#f-dir");
+    if (!fs || !fd) return;
+    if (fs.value === col) fd.value = fd.value === "asc" ? "desc" : "asc";
+    else { fs.value = col; fd.value = (col === "date" || col === "amount" || col === "period") ? "desc" : "asc"; }
+    $$(".jtable th.sortable").forEach(function (t) { t.classList.remove("asc", "desc"); if (t.getAttribute("data-col") === col) t.classList.add(fd.value); });
+    fireChange(fs);
+  }
+  function jResetQform() {
+    var q = $("#qform"); if (!q) return;
+    var lf = q.querySelector('[name="label"]'); if (lf) lf.value = "";
+    var af = q.querySelector('[name="amount"]'); if (af) af.value = "";
+    setHidden("q-cat-v", ""); setHidden("q-flow-v", ""); setHidden("q-dest-v", ""); setHidden("q-date-v", "");
+    var cb = $("#q-cat"); if (cb) window.selSet(cb, "", "—", true);
+    var db = $("#q-date"); if (db) window.selSet(db, "", "(date)", true);
+    var dw = $("#q-dest-wrap"); if (dw) dw.classList.add("hidden");
+    if (lf) lf.focus();
+  }
+
   /* delegated click handling (CSP-clean) */
   document.addEventListener("click", function (e) {
+    if (e.target.closest(".em-menu,.em-cal,.em-mp,.em-auto,input")) return; // let widgets/inline inputs handle their own clicks
     var el = e.target.closest("[data-action]");
     if (!el) return;
     var action = el.getAttribute("data-action");
+    if (action === "j-pick") { jPick(el); return; }
+    if (action === "j-edit") { jEdit(el); return; }
+    if (action === "j-sort") { jSort(el); return; }
+    if (action === "close-drawers") { if (window.closeDrawers) window.closeDrawers(); return; }
     if (action === "theme-toggle") {
       var html = document.documentElement;
       html.setAttribute("data-theme", html.getAttribute("data-theme") === "dark" ? "light" : "dark");
@@ -136,6 +254,16 @@
     }
   });
 
+  /* keyboard: open an inline editor / sort header with Enter or Space */
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    if (e.target.closest("input,.em-menu,.em-cal,.em-mp")) return;
+    var el = e.target.closest('[data-action="j-edit"],[data-action="j-sort"]');
+    if (!el) return;
+    e.preventDefault();
+    if (el.getAttribute("data-action") === "j-sort") jSort(el); else jEdit(el);
+  });
+
   function init() {
     if (document.body) {
       document.body.addEventListener("htmx:beforeSwap", allowErrorSwap);
@@ -144,6 +272,9 @@
         initCascade();
         adaptAccount();
         adaptEnvelope();
+      });
+      document.body.addEventListener("htmx:afterRequest", function (e) {
+        if (e.detail && e.detail.elt && e.detail.elt.id === "qform" && e.detail.successful) jResetQform();
       });
     }
     initCascade();

@@ -1,0 +1,182 @@
+{{define "journal"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "head" .}}<title>{{.T "journal.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="app" hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
+
+  <aside class="rail">
+    <a class="logo" href="/" style="text-decoration:none"><span class="lg-full">Econo<b>Me</b></span><span class="lg-mini">E<b>m</b></span></a>
+    <nav class="nav">
+      <a {{if eq .Nav "budget"}}class="on"{{end}} href="/"><span class="i">▤</span><span class="label">{{.T "nav.budget"}}</span></a>
+      <a href="/"><span class="i">◴</span><span class="label">{{.T "nav.patrimoine"}}</span></a>
+      <a href="/config/parameters"><span class="i">⚙</span><span class="label">{{.T "nav.configuration"}}</span></a>
+    </nav>
+    <div>
+      <div class="raillab">{{.T "shell.scope"}}</div>
+      {{range .Scopes}}
+        <a class="acct{{if .IsAll}} all{{else}} cur{{end}}{{if .On}} on{{end}}" href="/journal?period={{$.Period}}&scope={{.Key}}">
+          <span class="adot"></span>{{if .IsAll}}<span class="mc">∑</span>{{end}}<div class="ai"><div class="nm">{{.Name}}</div><small>{{.Note}}</small></div>
+        </a>
+      {{end}}
+    </div>
+    <div class="railsp"></div>
+    <div class="me">
+      <button class="iconbtn" type="button" data-action="theme-toggle" title="{{.T "shell.theme"}}">◐</button>
+      <span>{{.Email}}</span>
+      <form method="post" action="/logout" style="display:inline">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <button class="btn" type="submit">{{.T "shell.logout"}}</button>
+      </form>
+    </div>
+  </aside>
+
+  <main class="center">
+    <header class="head">
+      <button class="iconbtn btn-left" type="button" data-action="nav-left" title="{{.T "shell.collapse_rail"}}">☰</button>
+      <h1>{{.T "journal.title"}}</h1>
+      <div class="mnav">
+        <a class="iconbtn" href="/journal?period={{.PrevPeriod}}&scope={{.Scope}}">‹</a>
+        <button class="m" type="button" data-action="toggle-picker">{{.MonthLabel}}</button>
+        <a class="iconbtn" href="/journal?period={{.NextPeriod}}&scope={{.Scope}}">›</a>
+        <div class="mp{{if .PickerOpen}} open{{end}}" id="mp">
+          <div class="mp-y">
+            <button type="button" data-action="goto" data-href="/journal?period={{.PrevYearPeriod}}&scope={{.Scope}}&pick=1">‹</button>
+            <span>{{.YearLabel}}</span>
+            <button type="button" data-action="goto" data-href="/journal?period={{.NextYearPeriod}}&scope={{.Scope}}&pick=1">›</button>
+          </div>
+          <div class="mp-g">{{range .MonthCells}}<button type="button" data-action="goto" data-href="/journal?period={{.Period}}&scope={{$.Scope}}"{{if .On}} class="cur"{{end}}>{{.Label}}</button>{{end}}</div>
+        </div>
+      </div>
+      <div class="sp"></div>
+      <div class="tabs"><a href="/?period={{.Period}}&scope={{.Scope}}">{{.T "forecast.tab.forecast"}}</a><a class="on" href="/journal?period={{.Period}}&scope={{.Scope}}">{{.T "forecast.tab.journal"}}</a></div>
+      <button class="iconbtn btn-right" type="button" data-action="nav-right" title="{{.T "shell.toggle_panel"}}">⟩</button>
+    </header>
+
+    <div class="cbody">
+      {{if .Locked}}<div class="lockbar">🔒 {{.T "journal.locked"}}</div>{{end}}
+
+      {{if .NotCreated}}
+        <section class="empty">
+          <h3>{{.T "forecast.notcreated.title"}}</h3>
+          <p>{{.T "journal.notcreated.body"}} {{.MonthLabel}}.</p>
+          <a class="btn primary" href="/month-init?period={{.Period}}">{{.T "forecast.notcreated.action"}} {{.MonthLabel}}</a>
+        </section>
+      {{else}}
+        {{if .Editable}}
+        <form class="qbar" id="qform" hx-post="/transactions?period={{.Period}}&scope={{.Scope}}" hx-include="#jfilters" hx-target="#jbody" hx-swap="outerHTML">
+          <input type="hidden" name="op_date" id="q-date-v">
+          <input type="hidden" name="category_id" id="q-cat-v">
+          <input type="hidden" name="flow_type" id="q-flow-v">
+          <input type="hidden" name="account_id" id="q-acct-v">
+          <input type="hidden" name="dest_account_id" id="q-dest-v">
+          <input type="hidden" name="status" id="q-status-v" value="cleared">
+          <div class="row">
+            <div class="field"><label>{{.T "journal.col.date"}}</label>
+              <button type="button" class="sel-btn ph" id="q-date" data-action="j-pick" data-kind="date" data-target="q-date-v"><span class="lab">{{.T "journal.date.none"}}</span><span class="cr">▾</span></button></div>
+            <div class="field grow"><label>{{.T "journal.col.label"}}</label><input class="inp" name="label" id="q-label" placeholder="{{.T "journal.label.ph"}}" autocomplete="off"></div>
+            <div class="field"><label>{{.T "journal.col.category"}}</label>
+              <button type="button" class="sel-btn ph" id="q-cat" data-action="j-pick" data-kind="cat" data-target="q-cat-v"><span class="lab">—</span><span class="cr">▾</span></button></div>
+            <div class="field"><label>{{.T "journal.col.account"}}</label>
+              <button type="button" class="sel-btn" id="q-acct" data-action="j-pick" data-kind="acct" data-target="q-acct-v"><span class="lab">—</span><span class="cr">▾</span></button></div>
+            <div class="field hidden" id="q-dest-wrap"><label>→ {{.T "journal.dest"}}</label>
+              <button type="button" class="sel-btn" id="q-dest" data-action="j-pick" data-kind="acct" data-target="q-dest-v"><span class="lab">—</span><span class="cr">▾</span></button></div>
+            <div class="field" style="width:104px"><label>{{.T "journal.col.amount"}}</label><input class="inp n" name="amount" id="q-amt" placeholder="0,00" inputmode="decimal" style="width:104px"></div>
+            <div class="field"><label>{{.T "journal.col.status"}}</label>
+              <button type="button" class="sel-btn" id="q-status" data-action="j-pick" data-kind="status" data-target="q-status-v"><span class="lab">{{.T "txn.status.cleared"}}</span><span class="cr">▾</span></button></div>
+            <button class="addbtn" type="submit" title="{{.T "journal.add"}}">+</button>
+          </div>
+        </form>
+        {{end}}
+
+        <table class="jtable">
+          <colgroup><col style="width:78px"><col style="width:78px"><col><col style="width:128px"><col style="width:150px"><col style="width:118px"><col style="width:122px"><col style="width:30px"></colgroup>
+          <thead><tr>
+            <th class="sortable{{if eq .Sort "date"}} {{.Dir}}{{end}}" data-action="j-sort" data-col="date" tabindex="0">{{.T "journal.col.date"}} <span class="srt"></span></th>
+            <th class="sortable{{if eq .Sort "period"}} {{.Dir}}{{end}}" data-action="j-sort" data-col="period" tabindex="0">{{.T "journal.col.period"}} <span class="srt"></span></th>
+            <th class="sortable lbl{{if eq .Sort "label"}} {{.Dir}}{{end}}" data-action="j-sort" data-col="label" tabindex="0">{{.T "journal.col.label"}} <span class="srt"></span></th>
+            <th class="sortable{{if eq .Sort "cat"}} {{.Dir}}{{end}}" data-action="j-sort" data-col="cat" tabindex="0">{{.T "journal.col.category"}} <span class="srt"></span></th>
+            <th class="sortable{{if eq .Sort "acct"}} {{.Dir}}{{end}}" data-action="j-sort" data-col="acct" tabindex="0">{{.T "journal.col.account"}} <span class="srt"></span></th>
+            <th class="n sortable{{if eq .Sort "amount"}} {{.Dir}}{{end}}" data-action="j-sort" data-col="amount" tabindex="0">{{.T "journal.col.amount"}} <span class="srt"></span></th>
+            <th class="sortable{{if eq .Sort "status"}} {{.Dir}}{{end}}" data-action="j-sort" data-col="status" tabindex="0">{{.T "journal.col.status"}} <span class="srt"></span></th>
+            <th class="actcol"></th>
+          </tr></thead>
+          {{template "journal-rows" .}}
+        </table>
+        {{if .Empty}}<div class="empty" style="padding:30px 20px"><p style="margin:0;color:var(--muted)">{{.T "journal.empty"}}</p></div>{{end}}
+      {{end}}
+    </div>
+  </main>
+
+  <aside class="right" id="rightpanel">
+    {{if not .NotCreated}}
+    <section>
+      {{template "month-summary" .}}
+
+      <form class="panel-card" id="jfilters" hx-get="/journal/rows?period={{.Period}}&scope={{.Scope}}" hx-target="#jbody" hx-swap="outerHTML" hx-trigger="change, keyup changed delay:300ms">
+        <div class="l">{{.T "journal.filters"}}</div>
+        <input type="hidden" name="filtered" value="1">
+        <input type="hidden" name="sort" id="f-sort" value="{{.Sort}}">
+        <input type="hidden" name="dir" id="f-dir" value="{{.Dir}}">
+        <div style="margin-bottom:13px"><span class="flab">{{.T "journal.filter.search"}}</span><input class="inp" name="fq" id="f-search" value="{{.FQ}}" placeholder="{{.T "journal.label.ph"}}" autocomplete="off" style="width:100%"></div>
+        <div style="margin-bottom:13px"><span class="flab">{{.T "journal.col.category"}}</span>
+          <input type="hidden" name="fcategory" id="f-cat-v" value="{{.FCategory}}">
+          <button type="button" class="sel-btn block" id="f-cat" data-action="j-pick" data-kind="fcat" data-target="f-cat-v"><span class="lab">{{.T "journal.filter.all"}}</span><span class="cr">▾</span></button></div>
+        <div style="margin-bottom:13px"><span class="flab">{{.T "journal.col.status"}}</span>
+          <div class="chips">{{range .FStatuses}}<label class="fchip{{if .On}} on{{end}}"><input type="checkbox" name="fstatus" value="{{.Code}}"{{if .On}} checked{{end}} hidden>{{.Icon}} {{.Label}}</label>{{end}}</div></div>
+        <div><span class="flab">{{.T "journal.filter.type"}}</span>
+          <div class="chips"><label class="fchip{{if .FTransfers}} on{{end}}"><input type="checkbox" name="ftransfers" value="1"{{if .FTransfers}} checked{{end}} hidden>⇄ {{.T "journal.filter.transfers"}}</label></div></div>
+      </form>
+    </section>
+    {{end}}
+  </aside>
+
+  <div class="scrim" data-action="close-drawers"></div>
+</div>
+<div id="tt"></div>
+
+<script type="application/json" id="j-cats">{{.CatsJSON}}</script>
+<script type="application/json" id="j-accts">{{.AcctsJSON}}</script>
+<script type="application/json" id="j-status">{{.StatusJSON}}</script>
+{{template "appscripts" .}}
+</body>
+</html>{{end}}
+
+
+{{/* Table body — all rows for the month (sorted+filtered). Receives JournalView. */}}
+{{define "journal-rows"}}<tbody id="jbody" data-period="{{.Period}}" data-scope="{{.Scope}}"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  {{range .Rows}}{{template "journal-row" .}}{{end}}
+</tbody>{{end}}
+
+
+{{/* One journal row. Receives a JRow. */}}
+{{define "journal-row"}}
+<tr id="jrow-{{.ID}}">
+  <td{{if .Editable}} class="e" data-action="j-edit" data-edit="op_date" data-id="{{.ID}}" tabindex="0"{{end}}>{{if .DateApprox}}<span style="color:var(--faint)">{{.DateStr}}</span>{{else}}{{.DateStr}}{{end}}</td>
+  <td{{if .Editable}} class="e" data-action="j-edit" data-edit="budget_period" data-id="{{.ID}}" data-period="{{.BudgetPeriod}}" tabindex="0"{{end}}><span class="chip-period{{if not .PeriodHighlight}} muted{{end}}">{{.PeriodLabel}}</span></td>
+  <td class="lbl{{if .Editable}} e" data-action="j-edit" data-edit="label" data-id="{{.ID}}" tabindex="0{{end}}" title="{{.Label}}">{{if .IsTransfer}}<span class="xfer">⇄</span>{{end}}<span class="ltext">{{.Label}}</span></td>
+  {{if .IsTransfer}}
+    <td><span class="catpill">{{.CategoryName}}</span></td>
+    <td><span class="catpill atext" title="{{.AccountDisplay}}">{{.AccountDisplay}}</span></td>
+  {{else}}
+    <td{{if .Editable}} class="e" data-action="j-edit" data-edit="category_id" data-id="{{.ID}}" data-cat="{{.CategoryID}}" tabindex="0"{{end}}><span class="catpill">{{.CategoryName}}</span></td>
+    <td{{if .Editable}} class="e" data-action="j-edit" data-edit="account_id" data-id="{{.ID}}" data-acct="{{.AccountID}}" tabindex="0"{{end}}><span class="catpill atext">{{.AccountName}}</span></td>
+  {{end}}
+  <td class="n{{if .Editable}} e" data-action="j-edit" data-edit="amount" data-id="{{.ID}}" tabindex="0{{end}}"><span class="vtext{{if .AmountPos}} pos{{end}}"{{if .AmountMuted}} style="color:var(--faint)"{{end}}>{{.AmountStr}}</span></td>
+  <td class="stcell"><span class="pill {{.StatusClass}}{{if .Editable}} statpill" data-action="j-edit" data-edit="status" data-id="{{.ID}}" data-status="{{.Status}}" tabindex="0{{end}}"><span class="ic">{{.StatusIcon}}</span>{{.StatusLabel}}</span></td>
+  <td class="actcol">{{if .Editable}}<button class="rowdel" type="button" title="{{.DelTitle}}" hx-delete="/transactions/{{.ID}}?period={{.Period}}&scope={{.Scope}}" hx-target="#jrow-{{.ID}}" hx-swap="delete">✕</button>{{end}}</td>
+</tr>
+{{end}}
+
+
+{{/* Right-panel month summary. Receives JournalView. */}}
+{{define "month-summary"}}<div class="panel-card" id="month-summary"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  <div class="l">{{.T "journal.summary"}}</div>
+  <div class="sum">
+    <div class="wr"><span>{{.T "journal.sum.income"}}</span><b class="pos">{{.Summary.IncomeStr}}</b></div>
+    <div class="wr"><span>{{.T "journal.sum.real"}} <span class="help" tabindex="0" data-tip="{{.T "journal.sum.real_help"}}">?</span></span><b>{{.Summary.RealStr}}</b></div>
+    <div class="wr"><span>{{.T "journal.sum.pending"}}</span><b>{{.Summary.PendingStr}} · {{.Summary.PendingCount}} {{.T "journal.ops"}}</b></div>
+    <div class="wr"><span>{{.T "journal.sum.awaited"}}</span><b>{{.Summary.AwaitedStr}} · {{.Summary.AwaitedCount}} {{.T "journal.ops"}}</b></div>
+    <div class="wr"><span><b>{{.T "journal.sum.net"}}</b></span><b{{if .Summary.NetPos}} class="pos"{{end}}>{{.Summary.NetStr}}</b></div>
+  </div>
+  <div style="color:var(--faint);font-size:11.5px;margin-top:10px">↳ {{.T "journal.sum.transfers_note"}} <a class="jlink" href="/?period={{.Period}}&scope={{.Scope}}">{{.T "journal.sum.see_forecast"}}</a></div>
+</div>{{end}}

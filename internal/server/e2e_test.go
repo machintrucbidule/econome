@@ -242,6 +242,28 @@ func TestForecastStylesheetDefinesClasses(t *testing.T) {
 	}
 }
 
+// TestJournalStylesheetDefinesClasses guards the journal screen against the #24
+// regression: every journal class must be in the served stylesheet (they were
+// ported from the mockup's page <style>).
+func TestJournalStylesheetDefinesClasses(t *testing.T) {
+	ts, client := newTestServer(t)
+	resp, err := client.Get(ts.URL + "/assets/econome.css")
+	if err != nil {
+		t.Fatalf("GET econome.css: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	css := string(body)
+	for _, sel := range []string{
+		".jtable", ".statpill", ".catpill", ".srt", ".panel-card", ".flab",
+		".vtext", ".actcol", ".chip-period", ".xfer", ".ltext", ".sk-row",
+	} {
+		if !strings.Contains(css, sel) {
+			t.Errorf("econome.css missing journal selector %q", sel)
+		}
+	}
+}
+
 func getBody(t *testing.T, client *http.Client, base, path string) string {
 	t.Helper()
 	resp, err := client.Get(base + path)
