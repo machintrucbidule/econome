@@ -1,5 +1,7 @@
 package view
 
+import "html/template"
+
 // View-models for the security/admin modals (functional/01 §4–§8). They back the
 // htmx fragments swapped into #modal-host on the Parameters screen and the
 // invitation-acceptance page.
@@ -8,8 +10,11 @@ package view
 // modals.
 type SecurityModalView struct {
 	Base
-	Kind        string   // "enrol" | "backup" | "password" | "disable"
-	QRDataURI   string   // data: URI of the enrolment QR (enrol)
+	Kind string // "enrol" | "backup" | "password" | "disable"
+	// QRDataURI is a self-generated PNG data: URI; typed template.URL so
+	// html/template emits it verbatim (a plain string is filtered to #ZgotmplZ
+	// because data: URLs are treated as unsafe in a src attribute).
+	QRDataURI   template.URL
 	Secret      string   // manual-entry secret (enrol)
 	BackupCodes []string // shown once (enrol confirm / regenerate)
 	FieldErrors map[string]string

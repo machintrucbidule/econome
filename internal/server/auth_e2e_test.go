@@ -79,6 +79,20 @@ func TestInvitationIssueAndAccept(t *testing.T) {
 	}
 }
 
+func TestTOTPEnrolRendersQRDataURI(t *testing.T) {
+	base, admin := ownerClient(t)
+	// GET /security/2fa returns the enrol modal with the QR as a data: URI; the
+	// data URI must survive html/template's URL filter (typed template.URL), not
+	// be rewritten to the #ZgotmplZ placeholder.
+	body := getBody(t, admin, base, "/security/2fa")
+	if !strings.Contains(body, "data:image/png;base64,") {
+		t.Fatal("2FA enrol modal should embed the QR as a data:image/png base64 URI")
+	}
+	if strings.Contains(body, "ZgotmplZ") {
+		t.Fatal("QR data URI was filtered by html/template (#ZgotmplZ) — needs template.URL")
+	}
+}
+
 func TestAdminGateBlocksNonAdmin(t *testing.T) {
 	base, admin := ownerClient(t)
 

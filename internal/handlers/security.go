@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/base64"
 	"errors"
+	"html/template"
 	"net/http"
 	"strconv"
 
@@ -49,8 +50,16 @@ func (h *Handlers) TOTPEnrolGet(w http.ResponseWriter, r *http.Request) {
 	v := h.secModal(r)
 	v.Kind = "enrol"
 	v.Secret = enr.Secret
-	v.QRDataURI = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+	v.QRDataURI = qrDataURI(png)
 	h.render(w, http.StatusOK, "security-modal", v)
+}
+
+// qrDataURI wraps a PNG as a template.URL data: URI (app-generated, so safe to
+// emit verbatim past html/template's URL filter).
+func qrDataURI(png []byte) template.URL {
+	// The bytes are a self-generated QR PNG (never user input); base64 is
+	// URL-attribute-safe, so emitting it verbatim is intentional.
+	return template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(png)) //nolint:gosec // app-generated PNG, not attacker-controlled
 }
 
 // TOTPConfirm verifies the enrolment code, enables 2FA, and shows the one-time
@@ -70,7 +79,7 @@ func (h *Handlers) TOTPConfirm(w http.ResponseWriter, r *http.Request) {
 			if enr, e := h.svc.CurrentTOTPEnrolment(r.Context(), c.User.ID); e == nil {
 				if png, e2 := qrcode.Encode(enr.OTPAuthURL, qrcode.Medium, 256); e2 == nil {
 					v.Secret = enr.Secret
-					v.QRDataURI = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+					v.QRDataURI = qrDataURI(png)
 				}
 			}
 			h.render(w, http.StatusUnprocessableEntity, "security-modal", v)
