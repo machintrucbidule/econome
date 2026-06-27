@@ -187,6 +187,9 @@ input.inp.n{text-align:right;font-family:var(--num)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 /* lifecycle toolbar (close / unlock / regenerate) */
 .lifebar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:16px}
+/* build version (rail bottom + auth screens, increment "version display") */
+.railver{margin-top:8px;font-size:11px;color:var(--muted);opacity:.7;font-family:var(--num)}
+.authver{position:fixed;left:14px;bottom:12px;font-size:11px;color:var(--muted);opacity:.7;font-family:var(--num)}
 /* security / users panels (increment 8) */
 .linkbtn{background:none;border:0;color:var(--brand);font-weight:700;cursor:pointer;font-size:13px;padding:0}
 .linkbtn:hover{text-decoration:underline}

@@ -79,6 +79,20 @@ func TestInvitationIssueAndAccept(t *testing.T) {
 	}
 }
 
+func TestAppVersionDisplayed(t *testing.T) {
+	base, admin := ownerClient(t)
+	// Authenticated screens show the version at the bottom of the rail.
+	shell := getBody(t, admin, base, "/")
+	if !strings.Contains(shell, "v0.0.1") {
+		t.Error("authenticated shell rail should show v0.0.1")
+	}
+	// The login screen (≥1 user exists) shows the version too (auth footer).
+	login := getBody(t, clientFor(), base, "/login")
+	if !strings.Contains(login, "v0.0.1") {
+		t.Error("login screen should show v0.0.1")
+	}
+}
+
 func TestTOTPEnrolRendersQRDataURI(t *testing.T) {
 	base, admin := ownerClient(t)
 	// GET /security/2fa returns the enrol modal with the QR as a data: URI; the

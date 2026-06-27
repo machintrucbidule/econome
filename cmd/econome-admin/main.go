@@ -20,8 +20,9 @@ import (
 	"econome/migrations"
 )
 
-// version is overridden at build time via -ldflags (guardrails/04 §4).
-var version = "dev"
+// version is overridden at build time via -ldflags (guardrails/04 §4); the
+// default mirrors the app's current semver baseline.
+var version = "0.0.1"
 
 func main() {
 	if len(os.Args) < 2 {
