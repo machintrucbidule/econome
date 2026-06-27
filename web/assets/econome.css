@@ -369,6 +369,7 @@ tbody tr.frow:hover{background:var(--brand-soft)}
 .metrics .fig .v{font-size:24px}
 .pos2{color:var(--ok);font-weight:700}.neg2{color:var(--bad);font-weight:700}.nul2{color:var(--faint)}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.dot.sav{background:var(--c-sav)}.dot.pea{background:var(--ok)}.dot.emp{background:var(--brand)}
 /* snapshot table — fixed layout so editing never resizes a cell */
 .ptable{table-layout:fixed}
 .ptable td.val{white-space:nowrap;cursor:pointer}

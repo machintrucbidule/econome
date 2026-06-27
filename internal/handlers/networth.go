@@ -255,7 +255,7 @@ func (h *Handlers) networthLines(base view.Base, d *services.NetWorthData) []vie
 		if s.Type != domain.AccountPassbook {
 			continue
 		}
-		lines = append(lines, h.supportLine(base, d, s, "var(--c-sav)"))
+		lines = append(lines, h.supportLine(base, d, s, "sav"))
 	}
 	lines = append(lines, view.NWLine{
 		Kind: "subtotal", RowClass: "sub-row", Label: base.T("networth.subtotal"),
@@ -269,7 +269,7 @@ func (h *Handlers) networthLines(base view.Base, d *services.NetWorthData) []vie
 		if s.Type != domain.AccountSecurities {
 			continue
 		}
-		gross := h.supportLine(base, d, s, "var(--ok)")
+		gross := h.supportLine(base, d, s, "pea")
 		gross.Kind = "pea_gross"
 		gross.Label = base.T("networth.pea_gross")
 		gross.ValueStr = base.Amount(s.Gross)
@@ -291,7 +291,7 @@ func (h *Handlers) networthLines(base view.Base, d *services.NetWorthData) []vie
 		if s.Type != domain.AccountEmployeeSavings {
 			continue
 		}
-		lines = append(lines, h.supportLine(base, d, s, "var(--brand)"))
+		lines = append(lines, h.supportLine(base, d, s, "emp"))
 	}
 	// total
 	lines = append(lines, view.NWLine{
@@ -304,10 +304,13 @@ func (h *Handlers) networthLines(base view.Base, d *services.NetWorthData) []vie
 	return lines
 }
 
-// supportLine builds one editable gross-snapshot row.
-func (h *Handlers) supportLine(base view.Base, d *services.NetWorthData, s services.NWSupport, dot string) view.NWLine {
+// supportLine builds one editable gross-snapshot row. dotClass is the fixed
+// palette class for the colour dot ("sav" | "pea" | "emp") — emitted as a CSS
+// class, never an inline style (html/template strips a `var(--…)` style value
+// to ZgotmplZ, and CSP forbids inline style).
+func (h *Handlers) supportLine(base view.Base, d *services.NetWorthData, s services.NWSupport, dotClass string) view.NWLine {
 	return view.NWLine{
-		Kind: "support", Label: s.Name, DotColor: dot,
+		Kind: "support", Label: s.Name, DotClass: dotClass,
 		Editable: true, AccountID: s.AccountID, Period: d.Period,
 		SnapshotID: s.SnapshotID, HasSnapshot: s.HasSnapshot, DelTitle: base.T("action.delete"),
 		ValueStr:  base.Amount(s.Gross),

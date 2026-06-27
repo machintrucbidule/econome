@@ -63,6 +63,15 @@ func TestNetWorthRendersAndRecomputes(t *testing.T) {
 	if !strings.Contains(page, "snapdel") {
 		t.Errorf("editable snapshot row missing the delete ✕")
 	}
+	// The support dot carries a fixed-palette CSS class, never an inline style:
+	// html/template strips a `var(--…)` style value to ZgotmplZ (#7747... 2FA
+	// fix's sibling regression from increment 7).
+	if !strings.Contains(page, `class="dot sav"`) {
+		t.Errorf("support dot missing its palette class (got no `class=\"dot sav\"`)")
+	}
+	if strings.Contains(page, "ZgotmplZ") {
+		t.Errorf("synthèse leaked a ZgotmplZ-filtered value (inline style not proven safe)")
+	}
 
 	// The ✕ deletes the snapshot (L7) and recomputes. CSRF rides the header (the
 	// htmx hx-delete inherits the .app hx-headers; Go does not parse a DELETE body).
@@ -142,7 +151,7 @@ func TestNetworthStylesheetDefinesClasses(t *testing.T) {
 	css := bodyOf(t, resp)
 	for _, sel := range []string{
 		".metrics", ".ptable", ".sub-row", ".tot-row", ".ann", ".commentbox",
-		".dot", ".pos2", ".neg2", ".nul2", ".rtable", "tr.cur", ".rfoot", ".rangeseg",
+		".dot", ".dot.sav", ".dot.pea", ".dot.emp", ".pos2", ".neg2", ".nul2", ".rtable", "tr.cur", ".rfoot", ".rangeseg",
 	} {
 		if !strings.Contains(css, sel) {
 			t.Errorf("econome.css missing patrimoine selector %q", sel)
