@@ -165,6 +165,7 @@ func (h *Handlers) forecastView(r *http.Request, d *services.ForecastData) view.
 		Scope:      d.Scope,
 		ScopeKind:  d.ScopeKind,
 		Scopes:     h.forecastScopes(base, d),
+		Savings:    h.railSavings(r, base),
 		NotCreated: !d.Exists,
 		Locked:     d.Locked,
 		Empty:      d.Empty,

@@ -8,7 +8,7 @@
     <a class="logo" href="/" style="text-decoration:none"><span class="lg-full">Econo<b>Me</b></span><span class="lg-mini">E<b>m</b></span></a>
     <nav class="nav">
       <a {{if eq .Nav "budget"}}class="on"{{end}} href="/"><span class="i">▤</span><span class="label">{{.T "nav.budget"}}</span></a>
-      <a href="/"><span class="i">◴</span><span class="label">{{.T "nav.patrimoine"}}</span></a>
+      <a {{if eq .Nav "patrimoine"}}class="on"{{end}} href="/networth?period={{.Period}}"><span class="i">◴</span><span class="label">{{.T "nav.patrimoine"}}</span></a>
       <a href="/config/parameters"><span class="i">⚙</span><span class="label">{{.T "nav.configuration"}}</span></a>
     </nav>
     <div>
@@ -19,6 +19,10 @@
         </a>
       {{end}}
     </div>
+    {{if .Savings}}<div>
+      <div class="raillab">{{.T "networth.rail.epargne"}}</div>
+      {{range .Savings}}<a class="acct sav" href="/networth?period={{$.Period}}"><span class="adot"></span><div class="ai"><div class="nm">{{.Name}}</div><small>{{.Note}}</small></div></a>{{end}}
+    </div>{{end}}
     <div class="railsp"></div>
     <div class="me">
       <button class="iconbtn" type="button" data-action="theme-toggle" title="{{.T "shell.theme"}}">◐</button>

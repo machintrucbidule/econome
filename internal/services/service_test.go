@@ -30,21 +30,22 @@ func newService(t *testing.T) *Service {
 // depsFromStore wires every repository of a *repo.Store into services.Deps.
 func depsFromStore(store *repo.Store, secret []byte) Deps {
 	return Deps{
-		Users:         store.Users,
-		Sessions:      store.Sessions,
-		Settings:      store.Settings,
-		Accounts:      store.Accounts,
-		Categories:    store.Categories,
-		Envelopes:     store.Envelopes,
-		Allocations:   store.Allocations,
-		Transactions:  store.Transactions,
-		Snapshots:     store.Snapshots,
-		Periods:       store.Periods,
-		PeriodEvents:  store.PeriodEvents,
-		Labels:        store.Labels,
-		UIPreferences: store.UIPreferences,
-		Tx:            store,
-		Secret:        secret,
+		Users:          store.Users,
+		Sessions:       store.Sessions,
+		Settings:       store.Settings,
+		Accounts:       store.Accounts,
+		Categories:     store.Categories,
+		Envelopes:      store.Envelopes,
+		Allocations:    store.Allocations,
+		Transactions:   store.Transactions,
+		Snapshots:      store.Snapshots,
+		NetworthMonths: store.NetworthMonths,
+		Periods:        store.Periods,
+		PeriodEvents:   store.PeriodEvents,
+		Labels:         store.Labels,
+		UIPreferences:  store.UIPreferences,
+		Tx:             store,
+		Secret:         secret,
 	}
 }
 

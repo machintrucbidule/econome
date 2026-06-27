@@ -63,6 +63,7 @@ type Service struct {
 	allocations  repo.AllocationRepo
 	transactions repo.TransactionRepo
 	snapshots    repo.SnapshotRepo
+	networthMos  repo.NetworthMonthRepo
 	periods      repo.PeriodRepo
 	periodEvents repo.PeriodEventRepo
 	labels       repo.LabelMappingRepo
@@ -78,21 +79,22 @@ type Service struct {
 // interface-typed fields, so a named struct keeps the wiring readable as the
 // service grows across increments rather than a long positional argument list.
 type Deps struct {
-	Users         repo.UserRepo
-	Sessions      repo.SessionRepo
-	Settings      repo.SettingsRepo
-	Accounts      repo.AccountRepo
-	Categories    repo.CategoryRepo
-	Envelopes     repo.EnvelopeRepo
-	Allocations   repo.AllocationRepo
-	Transactions  repo.TransactionRepo
-	Snapshots     repo.SnapshotRepo
-	Periods       repo.PeriodRepo
-	PeriodEvents  repo.PeriodEventRepo
-	Labels        repo.LabelMappingRepo
-	UIPreferences repo.UIPreferenceRepo
-	Tx            repo.Txer
-	Secret        []byte
+	Users          repo.UserRepo
+	Sessions       repo.SessionRepo
+	Settings       repo.SettingsRepo
+	Accounts       repo.AccountRepo
+	Categories     repo.CategoryRepo
+	Envelopes      repo.EnvelopeRepo
+	Allocations    repo.AllocationRepo
+	Transactions   repo.TransactionRepo
+	Snapshots      repo.SnapshotRepo
+	NetworthMonths repo.NetworthMonthRepo
+	Periods        repo.PeriodRepo
+	PeriodEvents   repo.PeriodEventRepo
+	Labels         repo.LabelMappingRepo
+	UIPreferences  repo.UIPreferenceRepo
+	Tx             repo.Txer
+	Secret         []byte
 }
 
 // New builds a Service from its dependencies. Tests inject fakes for the same
@@ -108,6 +110,7 @@ func New(d Deps) *Service {
 		allocations:  d.Allocations,
 		transactions: d.Transactions,
 		snapshots:    d.Snapshots,
+		networthMos:  d.NetworthMonths,
 		periods:      d.Periods,
 		periodEvents: d.PeriodEvents,
 		labels:       d.Labels,

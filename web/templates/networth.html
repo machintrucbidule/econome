@@ -1,0 +1,126 @@
+{{define "networth"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}" data-theme="{{.ThemeCode}}">
+<head>{{template "head" .}}<title>{{.T "networth.title"}} — {{.T "app.name"}}</title></head>
+<body data-theme="{{.ThemeCode}}">
+<div class="app no-right" hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
+
+  {{template "nw-rail" .}}
+
+  <main class="center">
+    <header class="head">
+      <button class="iconbtn btn-left" type="button" data-action="nav-left" title="{{.T "shell.collapse_rail"}}">☰</button>
+      <h1>{{.T "networth.title"}}</h1>
+      <div class="mnav">
+        <a class="iconbtn" href="/networth?period={{.PrevPeriod}}">‹</a>
+        <button class="m" type="button" data-action="toggle-picker">{{.MonthLabel}}</button>
+        <a class="iconbtn" href="/networth?period={{.NextPeriod}}">›</a>
+        <div class="mp{{if .PickerOpen}} open{{end}}" id="mp">
+          <div class="mp-y">
+            <button type="button" data-action="goto" data-href="/networth?period={{.PrevYearPeriod}}&pick=1">‹</button>
+            <span>{{.YearLabel}}</span>
+            <button type="button" data-action="goto" data-href="/networth?period={{.NextYearPeriod}}&pick=1">›</button>
+          </div>
+          <div class="mp-g">{{range .MonthCells}}<button type="button" data-action="goto" data-href="/networth?period={{.Period}}"{{if .On}} class="cur"{{end}}>{{.Label}}</button>{{end}}</div>
+        </div>
+      </div>
+      <div class="sp"></div>
+      <div class="tabs"><a class="on" href="/networth?period={{.Period}}">{{.T "networth.tab.synthese"}}</a><a href="/register?period={{.Period}}">{{.T "networth.tab.register"}}</a></div>
+    </header>
+
+    <div class="cbody">
+      {{if not .HasSavings}}
+        <section class="empty">
+          <h3>{{.T "networth.nosavings.title"}}</h3>
+          <p>{{.T "networth.nosavings.body"}}</p>
+          <a class="btn primary" href="/config/parameters">{{.T "networth.nosavings.action"}}</a>
+        </section>
+      {{else}}
+        {{template "nw-cards" .}}
+
+        <table class="ptable" style="margin-top:18px">
+          <colgroup><col><col style="width:178px"><col style="width:130px"></colgroup>
+          <thead><tr><th>{{.RelabelStr}}</th><th class="n">{{.T "networth.col.value"}}</th><th class="n">{{.T "networth.col.delta"}}</th></tr></thead>
+          {{template "nw-table" .}}
+        </table>
+        <div style="color:var(--faint);font-size:12px;margin:-6px 2px 18px">↳ {{.T "networth.manual_note"}}</div>
+        {{if .Empty}}<div class="empty" style="padding:18px 20px;margin-bottom:18px"><p style="margin:0;color:var(--muted)">{{.T "networth.empty.hint"}}</p></div>{{end}}
+
+        <div class="commentbox">
+          <div class="ch"><span class="t">{{.T "networth.comment.title"}}</span><span class="help" tabindex="0" data-tip="{{.T "networth.comment.help"}}">?</span></div>
+          <textarea name="comment" hx-put="/networth/{{.Period}}/comment" hx-trigger="blur changed" hx-swap="none" placeholder="{{.T "networth.comment.ph"}}">{{.CommentValue}}</textarea>
+          <div class="hint">{{if .AutoprefillOn}}{{.T "networth.comment.prefill_on"}}{{else}}{{.T "networth.comment.prefill_off"}}{{end}} <a class="jlink" href="/config/parameters">{{.T "networth.comment.params"}}</a></div>
+        </div>
+      {{end}}
+    </div>
+  </main>
+
+  <div class="scrim" data-action="close-drawers"></div>
+</div>
+<div id="tt"></div>
+{{template "appscripts" .}}
+</body>
+</html>{{end}}
+
+
+{{/* Metric cards. Receives the NetWorthView. */}}
+{{define "nw-cards"}}<div class="metrics" id="nw-cards"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  {{range .Cards}}<div class="fig{{if .Mod}} {{.Mod}}{{end}}">
+    <div class="l">{{.Label}}{{if .Help}} <span class="help" tabindex="0" data-tip="{{.Help}}">?</span>{{end}}</div>
+    <div class="v">{{.Value}}</div>
+    {{if .CapText}}<div class="s">{{.CapText}}</div>{{else if .HasDelta}}<div class="s">{{$.T "networth.this_month"}} <span class="{{if .DeltaPos}}pos2{{else if .DeltaNeg}}neg2{{else}}nul2{{end}}">{{if .DeltaPos}}+{{else if .DeltaNeg}}−{{end}}{{.DeltaStr}}</span></div>{{else}}<div class="s">{{$.T "networth.this_month"}} <span class="nul2">—</span></div>{{end}}
+  </div>{{end}}
+</div>{{end}}
+
+
+{{/* Snapshot table body. Receives the NetWorthView. */}}
+{{define "nw-table"}}<tbody id="nw-table" data-csrf="{{.CSRF}}"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  {{range .Lines}}{{template "nw-line" .}}{{end}}
+</tbody>{{end}}
+
+
+{{/* One snapshot-table row. Receives an NWLine. */}}
+{{define "nw-line"}}
+<tr{{if .RowClass}} class="{{.RowClass}}"{{end}}>
+  <td>{{if .DotColor}}<span class="dot" style="background:{{.DotColor}}"></span>{{.Label}}{{else if .Indent}}<span style="padding-left:30px">{{.Label}}</span> <span class="ann">{{.Ann}}</span>{{else}}{{.Label}}{{end}}</td>
+  {{if .Editable}}
+    <td class="n val e fill" data-action="nw-edit" data-account="{{.AccountID}}" data-period="{{.Period}}" data-snap="{{if .HasSnapshot}}{{.SnapshotID}}{{end}}" tabindex="0"><span class="vt">{{.ValueStr}}</span></td>
+  {{else}}
+    <td class="n">{{.ValueStr}}</td>
+  {{end}}
+  <td class="n{{if .DeltaDash}} nul2{{else if .DeltaPos}} pos2{{else if .DeltaNeg}} neg2{{else}} nul2{{end}}">{{.DeltaStr}}</td>
+</tr>
+{{end}}
+
+
+{{/* Shared Patrimoine rail. Receives the NetWorthView / RegisterView. */}}
+{{define "nw-rail"}}
+<aside class="rail">
+  <a class="logo" href="/" style="text-decoration:none"><span class="lg-full">Econo<b>Me</b></span><span class="lg-mini">E<b>m</b></span></a>
+  <nav class="nav">
+    <a {{if eq .Nav "budget"}}class="on"{{end}} href="/"><span class="i">▤</span><span class="label">{{.T "nav.budget"}}</span></a>
+    <a {{if eq .Nav "patrimoine"}}class="on"{{end}} href="/networth?period={{.Period}}"><span class="i">◴</span><span class="label">{{.T "nav.patrimoine"}}</span></a>
+    <a {{if eq .Nav "configuration"}}class="on"{{end}} href="/config/parameters"><span class="i">⚙</span><span class="label">{{.T "nav.configuration"}}</span></a>
+  </nav>
+  <div>
+    <div class="raillab">{{.T "shell.scope"}}</div>
+    <a class="acct all" href="/"><span class="adot"></span><span class="mc">∑</span><div class="ai"><div class="nm">{{.T "shell.scope.all"}}</div><small>{{.T "networth.rail.budget"}}</small></div><div class="bal">→</div></a>
+  </div>
+  {{if .CurAccounts}}<div>
+    <div class="raillab">{{.T "networth.rail.current"}}</div>
+    {{range .CurAccounts}}<a class="acct cur" href="/?period={{$.Period}}&scope={{.Key}}"><span class="adot"></span><div class="ai"><div class="nm">{{.Name}}</div><small>{{.Note}}</small></div></a>{{end}}
+  </div>{{end}}
+  {{if .Savings}}<div>
+    <div class="raillab">{{.T "networth.rail.epargne"}}</div>
+    {{range .Savings}}<a class="acct sav" href="/networth?period={{$.Period}}"><span class="adot"></span><div class="ai"><div class="nm">{{.Name}}</div><small>{{.Note}}</small></div></a>{{end}}
+  </div>{{end}}
+  <div class="railsp"></div>
+  <div class="me">
+    <button class="iconbtn" type="button" data-action="theme-toggle" title="{{.T "shell.theme"}}">◐</button>
+    <span>{{.Email}}</span>
+    <form method="post" action="/logout" style="display:inline">
+      <input type="hidden" name="_csrf" value="{{.CSRF}}">
+      <button class="btn" type="submit">{{.T "shell.logout"}}</button>
+    </form>
+  </div>
+</aside>
+{{end}}

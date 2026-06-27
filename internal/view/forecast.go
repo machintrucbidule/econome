@@ -121,6 +121,7 @@ type ForecastView struct {
 	Scope      string
 	ScopeKind  string
 	Scopes     []FScope
+	Savings    []FSaving // rail Épargne section → Patrimoine (O-21)
 
 	PickerOpen     bool
 	PrevYearPeriod string

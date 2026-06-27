@@ -81,10 +81,11 @@ type JournalView struct {
 	NextYearPeriod string
 	MonthCells     []MonthCell // reused from the forecast view
 
-	Scope  string
-	Scopes []FScope // reused from the forecast view
-	Sort   string
-	Dir    string
+	Scope   string
+	Scopes  []FScope  // reused from the forecast view
+	Savings []FSaving // rail Épargne section → Patrimoine (O-21)
+	Sort    string
+	Dir     string
 
 	NotCreated bool
 	Locked     bool

@@ -363,3 +363,54 @@ func TestSmokeMonthInitRecompute(t *testing.T) {
 		t.Errorf("residual did not recompute to negative after dropping income: %q", figuresText)
 	}
 }
+
+// TestSmokeNetWorthSnapshotEdit proves the Synthèse whole-cell snapshot edit
+// works in a real browser under the app's CSP: clicking the editable value cell
+// opens an input (app.js delegation), and committing it fires the htmx upsert
+// that live-swaps the table + metric cards. Also confirms the curve renders.
+func TestSmokeNetWorthSnapshotEdit(t *testing.T) {
+	ts, client := setupOwner(t)
+	base := ts.URL
+	mkAccountID(t, base, client, "Livret A", "passbook", "none")
+
+	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("no-sandbox", true),
+			chromedp.WSURLReadTimeout(45*time.Second))...) // O-19: harden the flaky Chrome websocket-launch
+	defer cancelAlloc()
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+	ctx, cancelT := context.WithTimeout(ctx, 50*time.Second)
+	defer cancelT()
+
+	var cardsText, chartHTML string
+	err := chromedp.Run(
+		ctx,
+		chromedp.Navigate(ts.URL+"/login"),
+		chromedp.WaitVisible(`#email`, chromedp.ByID),
+		chromedp.SendKeys(`#email`, "owner@example.org", chromedp.ByID),
+		chromedp.SendKeys(`#password`, "Tr0ub4dour&3xtra", chromedp.ByID),
+		chromedp.Submit(`#password`, chromedp.ByID),
+		chromedp.WaitVisible(`.app`, chromedp.ByQuery),
+		chromedp.Navigate(ts.URL+"/networth?period=2026-06"),
+		chromedp.WaitVisible(`#nw-table td.val.e`, chromedp.ByQuery),
+		// Open the whole-cell editor (app.js nw-edit delegation), type a value, commit.
+		chromedp.Click(`#nw-table td.val.e`, chromedp.ByQuery),
+		chromedp.WaitVisible(`#nw-table input.amt-inp`, chromedp.ByQuery),
+		chromedp.Evaluate(`(function(){var i=document.querySelector('#nw-table input.amt-inp');i.value='14200,00';i.dispatchEvent(new Event('blur'));})()`, nil),
+		chromedp.Sleep(500*time.Millisecond),
+		chromedp.Text(`#nw-cards`, &cardsText, chromedp.ByID),
+		// The Registre curve renders as a server-built SVG.
+		chromedp.Navigate(ts.URL+"/register?period=2026-06"),
+		chromedp.WaitVisible(`#nw-chart svg`, chromedp.ByQuery),
+		chromedp.OuterHTML(`#nw-chart`, &chartHTML, chromedp.ByID),
+	)
+	if err != nil {
+		t.Fatalf("chromedp net-worth smoke: %v", err)
+	}
+	if !strings.Contains(cardsText, "200,00") {
+		t.Errorf("metric cards did not recompute after the snapshot edit: %q", cardsText)
+	}
+	if !strings.Contains(chartHTML, "<svg") {
+		t.Errorf("registre curve did not render an SVG")
+	}
+}

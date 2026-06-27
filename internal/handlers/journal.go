@@ -238,6 +238,7 @@ func (h *Handlers) journalView(r *http.Request, d *services.JournalData) view.Jo
 		NextPeriod: shiftPeriod(d.Period, +1),
 		Scope:      d.Scope,
 		Scopes:     h.journalScopes(base, d),
+		Savings:    h.railSavings(r, base),
 		Sort:       d.Sort,
 		Dir:        d.Dir,
 		NotCreated: !d.Exists,

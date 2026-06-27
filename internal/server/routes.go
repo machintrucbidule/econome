@@ -64,6 +64,15 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	mux.Handle("DELETE /transactions/{id}", protected(http.HandlerFunc(h.TransactionDelete)))
 	mux.Handle("PUT /ui/expand", protected(http.HandlerFunc(h.UIExpand)))
 
+	// Patrimoine — Net worth (increment 7): Synthèse + Registre. Snapshots and
+	// comments are always editable, independent of the budget lock (L7).
+	mux.Handle("GET /networth", protected(http.HandlerFunc(h.NetWorthGet)))
+	mux.Handle("POST /snapshots", protected(http.HandlerFunc(h.SnapshotUpsert)))
+	mux.Handle("DELETE /snapshots/{id}", protected(http.HandlerFunc(h.SnapshotDelete)))
+	mux.Handle("PUT /networth/{period}/comment", protected(http.HandlerFunc(h.CommentPut)))
+	mux.Handle("GET /register", protected(http.HandlerFunc(h.RegisterGet)))
+	mux.Handle("GET /register/chart", protected(http.HandlerFunc(h.RegisterChart)))
+
 	// Configuration — Paramètres (increment 4, PR-a).
 	mux.Handle("GET /config/parameters", protected(http.HandlerFunc(h.ParametersGet)))
 	mux.Handle("GET /config/accounts/new", protected(http.HandlerFunc(h.AccountFormGet)))

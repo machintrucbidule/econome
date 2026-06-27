@@ -114,6 +114,24 @@ func (f fakeSnapshots) ListByPeriod(_ context.Context, _ repo.DBTX, userID int64
 	return sortByID(out, func(s domain.Snapshot) int64 { return s.ID }), nil
 }
 
+func (f fakeSnapshots) ListByUser(_ context.Context, _ repo.DBTX, userID int64) ([]domain.Snapshot, error) {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	var out []domain.Snapshot
+	for _, s := range f.d.snapshots {
+		if s.UserID == userID {
+			out = append(out, s)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Period != out[j].Period {
+			return out[i].Period < out[j].Period
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
+}
+
 func (f fakeSnapshots) Delete(_ context.Context, _ repo.DBTX, userID, id int64) error {
 	f.d.mu.Lock()
 	defer f.d.mu.Unlock()
@@ -136,6 +154,19 @@ func (f fakeNetworthMonths) Get(_ context.Context, _ repo.DBTX, userID int64, pe
 		}
 	}
 	return nil, domain.ErrNotFound
+}
+
+func (f fakeNetworthMonths) ListByUser(_ context.Context, _ repo.DBTX, userID int64) ([]domain.NetworthMonth, error) {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	var out []domain.NetworthMonth
+	for _, m := range f.d.networthMonths {
+		if m.UserID == userID {
+			out = append(out, m)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Period < out[j].Period })
+	return out, nil
 }
 
 func (f fakeNetworthMonths) Upsert(_ context.Context, _ repo.DBTX, userID int64, period, comment string) error {
