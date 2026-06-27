@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io"
 	"strconv"
+	"strings"
 
 	"econome/internal/domain"
 	"econome/internal/i18n"
@@ -35,7 +36,10 @@ func New(catalog *i18n.Catalog, version string) (*Renderer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("view: parse templates: %w", err)
 	}
-	return &Renderer{tmpl: t, catalog: catalog, version: version}, nil
+	// Normalise so display is always "v<semver>": the default var is "0.0.1"
+	// (no v) but a release injects the tag "vX.Y.Z" via -ldflags; strip the
+	// leading "v" here so the template's "v" prefix never doubles it.
+	return &Renderer{tmpl: t, catalog: catalog, version: strings.TrimPrefix(version, "v")}, nil
 }
 
 // Render writes the named template to w with the given data.
