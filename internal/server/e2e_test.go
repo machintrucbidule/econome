@@ -37,7 +37,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *http.Client) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rdr, err := view.New(catalog)
+	rdr, err := view.New(catalog, "0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}

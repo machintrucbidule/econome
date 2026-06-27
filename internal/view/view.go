@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io"
 	"strconv"
+	"strings"
 
 	"econome/internal/domain"
 	"econome/internal/i18n"
@@ -25,15 +26,20 @@ var funcs = template.FuncMap{
 type Renderer struct {
 	tmpl    *template.Template
 	catalog *i18n.Catalog
+	version string
 }
 
-// New parses every embedded template.
-func New(catalog *i18n.Catalog) (*Renderer, error) {
+// New parses every embedded template. version is the build version surfaced in
+// the UI (default "0.0.1", overridden by -ldflags at release).
+func New(catalog *i18n.Catalog, version string) (*Renderer, error) {
 	t, err := template.New("econome").Funcs(funcs).ParseFS(templates.FS, "*.html")
 	if err != nil {
 		return nil, fmt.Errorf("view: parse templates: %w", err)
 	}
-	return &Renderer{tmpl: t, catalog: catalog}, nil
+	// Normalise so display is always "v<semver>": the default var is "0.0.1"
+	// (no v) but a release injects the tag "vX.Y.Z" via -ldflags; strip the
+	// leading "v" here so the template's "v" prefix never doubles it.
+	return &Renderer{tmpl: t, catalog: catalog, version: strings.TrimPrefix(version, "v")}, nil
 }
 
 // Render writes the named template to w with the given data.
@@ -55,11 +61,12 @@ type Base struct {
 	Currency  string
 	Theme     domain.Theme
 	CSRFToken string
+	Version   string // build version shown in the UI (e.g. "0.0.1")
 }
 
 // NewBase builds a Base for a request.
 func (r *Renderer) NewBase(lang domain.Language, currency string, theme domain.Theme, csrf string) Base {
-	return Base{catalog: r.catalog, Lang: lang, Currency: currency, Theme: theme, CSRFToken: csrf}
+	return Base{catalog: r.catalog, Lang: lang, Currency: currency, Theme: theme, CSRFToken: csrf, Version: r.version}
 }
 
 // T localises a message key with optional positional arguments.

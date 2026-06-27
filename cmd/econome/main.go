@@ -29,8 +29,9 @@ import (
 )
 
 // version is overridden at build time via -ldflags "-X main.version=vX.Y.Z"
-// (guardrails/04 §4); the binary reports the released version.
-var version = "dev"
+// (guardrails/04 §4); the binary reports the released version. The default is the
+// current semver baseline (bumped only on a user-decided release).
+var version = "0.0.1"
 
 func main() {
 	if err := run(); err != nil {
@@ -75,7 +76,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	rdr, err := view.New(catalog)
+	rdr, err := view.New(catalog, version)
 	if err != nil {
 		return err
 	}
