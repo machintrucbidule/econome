@@ -57,7 +57,16 @@
     </header>
 
     <div class="cbody">
-      {{if .Locked}}<div class="lockbar">🔒 {{.T "journal.locked"}}</div>{{end}}
+      {{if .Locked}}
+        <div class="lockbar">🔒 {{.T "journal.locked"}}
+          <button class="btn ghost sm" type="button" hx-post="/periods/{{.Period}}/unlock" hx-vals='{"scope":"{{.Scope}}","from":"journal"}'>{{.T "lifecycle.unlock"}}</button>
+        </div>
+      {{else if not .NotCreated}}
+        <div class="lifebar">
+          <button class="btn ghost sm" type="button" hx-post="/periods/{{.Period}}/regenerate" hx-vals='{"scope":"{{.Scope}}","from":"journal"}' title="{{.T "lifecycle.regenerate_help"}}">{{.T "lifecycle.regenerate"}}</button>
+          <button class="btn sm" type="button" hx-post="/periods/{{.Period}}/lock" hx-vals='{"scope":"{{.Scope}}","from":"journal"}' hx-confirm="{{.T "lifecycle.lock_confirm"}}">{{.T "lifecycle.lock"}}</button>
+        </div>
+      {{end}}
 
       {{if .NotCreated}}
         <section class="empty">

@@ -23,12 +23,41 @@ func (userRepo) CountUsers(ctx context.Context, q DBTX) (int, error) {
 	return n, nil
 }
 
+func (userRepo) CountActiveAdmins(ctx context.Context, q DBTX) (int, error) {
+	var n int
+	if err := q.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM user WHERE is_admin = 1 AND status = ?`, string(domain.StatusActive)).Scan(&n); err != nil {
+		return 0, fmt.Errorf("repo: count active admins: %w", err)
+	}
+	return n, nil
+}
+
 func (userRepo) GetByEmail(ctx context.Context, q DBTX, email string) (*domain.User, error) {
 	return scanUser(q.QueryRowContext(ctx, selectUser+` WHERE email = ?`, email))
 }
 
 func (userRepo) GetByID(ctx context.Context, q DBTX, id int64) (*domain.User, error) {
 	return scanUser(q.QueryRowContext(ctx, selectUser+` WHERE id = ?`, id))
+}
+
+// ListAll returns every user account ordered by id. Admin user-management
+// operates on accounts across tenants (not on their financial data), so this is
+// the documented exception to user_id scoping (like GetByEmail at login).
+func (userRepo) ListAll(ctx context.Context, q DBTX) ([]domain.User, error) {
+	rows, err := q.QueryContext(ctx, selectUser+` ORDER BY id`)
+	if err != nil {
+		return nil, fmt.Errorf("repo: list users: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *u)
+	}
+	return out, rows.Err()
 }
 
 func (userRepo) Create(ctx context.Context, q DBTX, u *domain.User) (int64, error) {
@@ -68,6 +97,58 @@ func (userRepo) UpdatePasswordHash(ctx context.Context, q DBTX, id int64, hash s
 		return fmt.Errorf("repo: update password hash: %w", err)
 	}
 	return nil
+}
+
+// SetPassword sets the hash and the must_change_password flag together (a
+// self-service change clears it; an admin/CLI reset sets it — technical/05 §1/§8).
+func (userRepo) SetPassword(ctx context.Context, q DBTX, id int64, hash string, mustChange bool) error {
+	res, err := q.ExecContext(ctx,
+		`UPDATE user SET password_hash = ?, must_change_password = ?, updated_at = ? WHERE id = ?`,
+		hash, boolToInt(mustChange), formatTime(nowUTC()), id)
+	if err != nil {
+		return fmt.Errorf("repo: set password: %w", err)
+	}
+	return notFoundIfNoRows(res)
+}
+
+func (userRepo) UpdateEmail(ctx context.Context, q DBTX, id int64, email string) error {
+	res, err := q.ExecContext(ctx,
+		`UPDATE user SET email = ?, updated_at = ? WHERE id = ?`, email, formatTime(nowUTC()), id)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return domain.ErrDuplicate
+		}
+		return fmt.Errorf("repo: update email: %w", err)
+	}
+	return notFoundIfNoRows(res)
+}
+
+func (userRepo) UpdateTOTP(ctx context.Context, q DBTX, id int64, enabled bool, secret *string) error {
+	res, err := q.ExecContext(ctx,
+		`UPDATE user SET totp_enabled = ?, totp_secret = ?, updated_at = ? WHERE id = ?`,
+		boolToInt(enabled), nullString(secret), formatTime(nowUTC()), id)
+	if err != nil {
+		return fmt.Errorf("repo: update totp: %w", err)
+	}
+	return notFoundIfNoRows(res)
+}
+
+func (userRepo) UpdateStatus(ctx context.Context, q DBTX, id int64, status domain.Status) error {
+	res, err := q.ExecContext(ctx,
+		`UPDATE user SET status = ?, updated_at = ? WHERE id = ?`, string(status), formatTime(nowUTC()), id)
+	if err != nil {
+		return fmt.Errorf("repo: update status: %w", err)
+	}
+	return notFoundIfNoRows(res)
+}
+
+func (userRepo) SetAdmin(ctx context.Context, q DBTX, id int64, isAdmin bool) error {
+	res, err := q.ExecContext(ctx,
+		`UPDATE user SET is_admin = ?, updated_at = ? WHERE id = ?`, boolToInt(isAdmin), formatTime(nowUTC()), id)
+	if err != nil {
+		return fmt.Errorf("repo: set admin: %w", err)
+	}
+	return notFoundIfNoRows(res)
 }
 
 func scanUser(row rowScanner) (*domain.User, error) {

@@ -34,6 +34,23 @@ func (sessionRepo) GetByTokenHash(ctx context.Context, q DBTX, tokenHash string)
 	return scanSession(q.QueryRowContext(ctx, selectSession+` WHERE token_hash = ?`, tokenHash))
 }
 
+func (sessionRepo) ListByUser(ctx context.Context, q DBTX, userID int64) ([]domain.Session, error) {
+	rows, err := q.QueryContext(ctx, selectSession+` WHERE user_id = ? ORDER BY last_seen_at DESC, id DESC`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repo: list sessions: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.Session
+	for rows.Next() {
+		s, err := scanSession(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *s)
+	}
+	return out, rows.Err()
+}
+
 func (sessionRepo) Touch(ctx context.Context, q DBTX, id int64, lastSeen, expires time.Time) error {
 	_, err := q.ExecContext(ctx,
 		`UPDATE session SET last_seen_at = ?, expires_at = ? WHERE id = ?`,
@@ -51,9 +68,24 @@ func (sessionRepo) Delete(ctx context.Context, q DBTX, id int64) error {
 	return nil
 }
 
+func (sessionRepo) DeleteByUserScoped(ctx context.Context, q DBTX, userID, id int64) error {
+	res, err := q.ExecContext(ctx, `DELETE FROM session WHERE user_id = ? AND id = ?`, userID, id)
+	if err != nil {
+		return fmt.Errorf("repo: delete session scoped: %w", err)
+	}
+	return notFoundIfNoRows(res)
+}
+
 func (sessionRepo) DeleteByUser(ctx context.Context, q DBTX, userID int64) error {
 	if _, err := q.ExecContext(ctx, `DELETE FROM session WHERE user_id = ?`, userID); err != nil {
 		return fmt.Errorf("repo: delete sessions by user: %w", err)
+	}
+	return nil
+}
+
+func (sessionRepo) DeleteByUserExcept(ctx context.Context, q DBTX, userID, keepID int64) error {
+	if _, err := q.ExecContext(ctx, `DELETE FROM session WHERE user_id = ? AND id <> ?`, userID, keepID); err != nil {
+		return fmt.Errorf("repo: delete sessions except: %w", err)
 	}
 	return nil
 }

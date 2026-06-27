@@ -25,6 +25,7 @@ type UIPreferenceRepo interface {
 type InvitationRepo interface {
 	Create(ctx context.Context, q DBTX, inv *domain.Invitation) (int64, error)
 	ByTokenHash(ctx context.Context, q DBTX, tokenHash string) (*domain.Invitation, error)
+	ByID(ctx context.Context, q DBTX, id int64) (*domain.Invitation, error)
 	Update(ctx context.Context, q DBTX, inv *domain.Invitation) error
 	ListByCreator(ctx context.Context, q DBTX, createdBy int64) ([]domain.Invitation, error)
 }
@@ -162,6 +163,12 @@ func (invitationRepo) ByTokenHash(ctx context.Context, q DBTX, tokenHash string)
 	return scanInvitation(q.QueryRowContext(ctx,
 		`SELECT id, email, token_hash, invited_is_admin, created_by, expires_at, consumed_at, revoked_at
 		 FROM invitation WHERE token_hash = ?`, tokenHash))
+}
+
+func (invitationRepo) ByID(ctx context.Context, q DBTX, id int64) (*domain.Invitation, error) {
+	return scanInvitation(q.QueryRowContext(ctx,
+		`SELECT id, email, token_hash, invited_is_admin, created_by, expires_at, consumed_at, revoked_at
+		 FROM invitation WHERE id = ?`, id))
 }
 
 func (invitationRepo) Update(ctx context.Context, q DBTX, inv *domain.Invitation) error {

@@ -14,9 +14,13 @@ const PasswordMinLength = 8
 const (
 	MsgEmailRequired    = "validation.email.required"
 	MsgEmailInvalid     = "validation.email.invalid"
+	MsgEmailDuplicate   = "validation.email.duplicate"
 	MsgPasswordTooShort = "validation.password.too_short"
 	MsgPasswordClasses  = "validation.password.classes"
 	MsgPasswordMismatch = "validation.password.mismatch"
+	MsgPasswordWrong    = "validation.password.wrong"
+	MsgTOTPInvalid      = "validation.totp.invalid"
+	MsgInvitationBad    = "validation.invitation.invalid"
 )
 
 // PasswordCriteria reports which password-policy rules a candidate satisfies.

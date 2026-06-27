@@ -132,7 +132,8 @@ I-021..I-024). **Increment 5** (month-init assistant, PR #22): the non-persisted
   **O-23 resolved** — forecast toggle now `frow`/`fchev`, `app.js` sole toggler). Decisions **I-034**.
   See `docs/progress/0006-budget-core.md`.
 
-**Milestone M3 (Net worth) — COMPLETE; demo D4 to be presented.** Increment 7 (one PR): the Patrimoine
+**Milestone M3 (Net worth) — COMPLETE; merged (PR #32); demo D4 deferred to the D5 checkpoint (I-045).**
+Increment 7 (one PR): the Patrimoine
 group end to end — **Synthèse** (`GET /networth`: 4 metric cards, the editable snapshot table with PEA
 net / livrets subtotal / total / every Δ derived live, the per-month comment box with M25 auto-prefill)
 and **Registre** (`GET /register`: the server-rendered multi-series evolution curve + range filter
@@ -147,17 +148,27 @@ reste", **I-035** snapshot delete = explicit per-row ✕ (clear = revert), **I-0
 inline `Prévu` now editable in the aggregated scope too). Decisions **I-035..I-039**, **I-038** (rail).
 See `docs/progress/0007-networth.md`.
 
-**Next: increment 8 — Lifecycle, full auth, hardening (Milestone M4, release-ready)** (`development-plan/
-01-phased-plan.md`; `functional/04` §4 L1/L9, `functional/01` §4–§8, `technical/05`): month close/unlock
-(L1) with the pre-close `to_save` sweep (O-18), regenerate-missing-recurring (L9), the remaining auth
-surface (2FA enable/disable + backup codes, password change, active sessions, admin users/invitations),
-the security regression suite, the pre-release hardening pass. **Mandatory targeted subagent review on the
-auth surface.** Demo **D5** + the M4 pre-release pass; then Stage 7's final deliverable — author
-`specifications/prompts/stage-8-dsp2-import-spec.md`. **Awaiting the user's go-ahead** (`G15`) and the
-**D4** running-build demo. Carried open points: **O-16** (no opening-balance column), **O-17**
-(snapshots-at-init for cascade-full), **O-18** (the close increment's sweep txn — due now), **O-19**
-(`e2e chrome smoke` flake, mitigated by `WSURLReadTimeout`), **O-24** (`PairInternalTransfer`
-one-row-vs-two-leg, DSP2-only). **O-21/O-22/O-25 RESOLVED at D4** (see above).
+**Milestone M4 (Lifecycle, full auth, hardening — release-ready) — COMPLETE** on branch
+`feat/increment-8-lifecycle-auth` (one PR, I-040), all gates green, **mandatory auth subagent review done
+(findings fixed in-PR, I-046)**. Increment 8: **month lifecycle** — close/unlock (L1) + audit, "Régénérer
+les récurrents manquants" (L9, additive/idempotent), the close-confirm O-18 sweep reminder
+(`POST /periods/{period}/lock|unlock|regenerate`, `services/lifecycle.go`); **full auth** — TOTP 2FA
+(`pquerna/otp` + QR `skip2/go-qrcode`, Argon2id backup codes, stateless signed inline 2FA login step),
+invitations (issue/accept/revoke, 7-day single-use), admin user-management (list/deactivate/reactivate/
+reset-2fa/reset-password, **last-admin rule shared UI+CLI**, `AdminGuard`→404), active sessions,
+profile/password change + `must_change_password` enforcement, the Parameters **Profil/Sécurité/
+Utilisateurs** panels; the **`econome-admin` CLI** (reset-password/reset-2fa/user/backup); the security
+regression suite. **No new migration** (schema already had every column). Engine untouched (91.7 %).
+Decisions **I-040..I-046**. See `docs/progress/0008-lifecycle-auth-hardening.md`.
+
+**Next: STOP for the user's go-ahead, then present D4 + D5** (the deferred running build + the M4
+release-readiness demo) and the M4 pre-release pass. After that, **Stage 7's final deliverable** — author
+`specifications/prompts/stage-8-dsp2-import-spec.md` (DSP2 import **specification & dev plan**, in Cowork —
+**not** implementation) and confirm where it was written; do not start Stage 8. Carried open points:
+**O-16** (no opening-balance column), **O-17** (snapshots-at-init for cascade-full), **O-19**
+(`e2e chrome smoke` flake, mitigated), **O-24** (`PairInternalTransfer` one-row-vs-two-leg, DSP2-only),
+**O-26** (2FA backup consume + session issue not one tx — consume is atomic), **O-27** (`SetAdmin`
+promote/demote service+CLI-only, no UI route). **O-18/O-21/O-22/O-25 RESOLVED.**
 
 > Reminders: `main` is protected — all changes via PR → CI green → merge; required checks now include
 > `e2e chrome smoke` (O-7 resolved). Dependabot minor/patch auto-merge on green, majors manual (I-008).

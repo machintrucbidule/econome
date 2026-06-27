@@ -182,7 +182,18 @@ input.inp.n{text-align:right;font-family:var(--num)}
 .btn:hover{border-color:var(--brand);color:var(--brand)}
 .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn.primary:hover{background:var(--brand-dk);color:#fff}
 .btn.sm{padding:5px 10px;font-size:12.5px;height:auto}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted);font-weight:700}
+.btn.ghost:hover{border-color:var(--brand);color:var(--brand)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+/* lifecycle toolbar (close / unlock / regenerate) */
+.lifebar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:16px}
+/* security / users panels (increment 8) */
+.linkbtn{background:none;border:0;color:var(--brand);font-weight:700;cursor:pointer;font-size:13px;padding:0}
+.linkbtn:hover{text-decoration:underline}
+.codes{list-style:none;margin:12px 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.codes li{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px 12px;text-align:center;font-family:var(--num)}
+.ucol{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.form-ok{background:rgba(46,160,67,.12);border:1px solid var(--ok);color:var(--ok);border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:13px}
 
 /* quick-entry bar (journal) */
 .qbar{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px}

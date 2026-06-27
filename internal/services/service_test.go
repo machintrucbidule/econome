@@ -44,6 +44,8 @@ func depsFromStore(store *repo.Store, secret []byte) Deps {
 		PeriodEvents:   store.PeriodEvents,
 		Labels:         store.Labels,
 		UIPreferences:  store.UIPreferences,
+		Invitations:    store.Invitations,
+		TOTPBackups:    store.TOTPBackups,
 		Tx:             store,
 		Secret:         secret,
 	}

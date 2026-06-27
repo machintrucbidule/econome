@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"econome/internal/auth"
@@ -68,6 +69,8 @@ type Service struct {
 	periodEvents repo.PeriodEventRepo
 	labels       repo.LabelMappingRepo
 	uiPrefs      repo.UIPreferenceRepo
+	invitations  repo.InvitationRepo
+	totpBackups  repo.TOTPBackupRepo
 	tx           repo.Txer
 	secret       []byte
 	throttle     *auth.Throttle
@@ -93,6 +96,8 @@ type Deps struct {
 	PeriodEvents   repo.PeriodEventRepo
 	Labels         repo.LabelMappingRepo
 	UIPreferences  repo.UIPreferenceRepo
+	Invitations    repo.InvitationRepo
+	TOTPBackups    repo.TOTPBackupRepo
 	Tx             repo.Txer
 	Secret         []byte
 }
@@ -115,6 +120,8 @@ func New(d Deps) *Service {
 		periodEvents: d.PeriodEvents,
 		labels:       d.Labels,
 		uiPrefs:      d.UIPreferences,
+		invitations:  d.Invitations,
+		totpBackups:  d.TOTPBackups,
 		tx:           d.Tx,
 		secret:       d.Secret,
 		throttle:     auth.NewThrottle(20, time.Minute),
@@ -122,12 +129,17 @@ func New(d Deps) *Service {
 	}
 }
 
-// AuthResult is the outcome of a successful setup or login.
+// AuthResult is the outcome of a successful setup or login. When TwoFactor is
+// true the password verified but the account has 2FA on: no session is issued
+// yet (Token is empty); Pending is the signed token the TOTP step posts back
+// (functional/01 §3).
 type AuthResult struct {
 	Token     string
 	Kind      domain.SessionKind
 	ExpiresAt time.Time
 	User      *domain.User
+	TwoFactor bool
+	Pending   string
 }
 
 // ZeroUsers reports whether the instance has no users yet (the setup guard).
@@ -158,7 +170,7 @@ func (s *Service) Setup(ctx context.Context, in SetupInput) (*AuthResult, error)
 	}
 	now := s.now().UTC()
 	user := &domain.User{
-		Email: in.Email, PasswordHash: hash, IsAdmin: true, Status: domain.StatusActive,
+		Email: normaliseEmail(in.Email), PasswordHash: hash, IsAdmin: true, Status: domain.StatusActive,
 		Language: lang, Currency: currency, CreatedAt: now, UpdatedAt: now,
 	}
 	settings := defaultSettings(lang, currency, now)
@@ -212,7 +224,7 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthResult, error)
 		return nil, &LockedError{RetryAfter: time.Minute}
 	}
 
-	user, err := s.users.GetByEmail(ctx, s.tx.DB(), in.Email)
+	user, err := s.users.GetByEmail(ctx, s.tx.DB(), normaliseEmail(in.Email))
 	if errors.Is(err, domain.ErrNotFound) {
 		// Equalise timing against a known-email path so the response time does
 		// not reveal whether the address exists (technical/05 §6 — no user
@@ -237,6 +249,13 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthResult, error)
 		return nil, ErrInvalidCredentials
 	}
 
+	// A deactivated account cannot log in (functional/01 §8); the error stays
+	// generic so deactivation is not disclosed. Checked after the password verify
+	// to keep the response time uniform.
+	if user.Status != domain.StatusActive {
+		return nil, ErrInvalidCredentials
+	}
+
 	// Success: reset the counter, transparently re-hash if parameters changed.
 	user.FailedLoginCount = 0
 	user.LastFailedLoginAt = nil
@@ -249,6 +268,12 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthResult, error)
 		if nh, e := auth.HashPassword(in.Password); e == nil {
 			_ = s.users.UpdatePasswordHash(ctx, s.tx.DB(), user.ID, nh)
 		}
+	}
+
+	// 2FA-enabled account: defer the session to the TOTP step, carrying the user
+	// + remember choice in a short-lived signed token (functional/01 §3).
+	if user.TOTPEnabled {
+		return &AuthResult{TwoFactor: true, Pending: auth.SignPending(s.secret, user.ID, in.Remember, now), User: user}, nil
 	}
 	return s.issueSession(ctx, user, in.Remember)
 }
@@ -381,4 +406,11 @@ func normaliseCurrency(s string) string {
 		return "EUR"
 	}
 	return s
+}
+
+// normaliseEmail trims surrounding space and lowercases the address (login is
+// case-insensitive on the local part by our convention; uniqueness is enforced on
+// the stored value).
+func normaliseEmail(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
 }

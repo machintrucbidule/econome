@@ -56,6 +56,8 @@ func newTestServer(t *testing.T) (*httptest.Server, *http.Client) {
 		PeriodEvents:   store.PeriodEvents,
 		Labels:         store.Labels,
 		UIPreferences:  store.UIPreferences,
+		Invitations:    store.Invitations,
+		TOTPBackups:    store.TOTPBackups,
 		Tx:             store,
 		Secret:         []byte("secret-0123456789abcdef0123456789"),
 	})

@@ -142,19 +142,32 @@ func applyOne(ctx context.Context, db *sql.DB, m Migration) error {
 // backup writes a consistent pre-migration snapshot via VACUUM INTO. VACUUM
 // cannot run inside a transaction, so it runs on the connection directly.
 func backup(ctx context.Context, db *sql.DB, backupDir string, from, to int) error {
-	if err := os.MkdirAll(backupDir, 0o750); err != nil {
-		return fmt.Errorf("repo: create backup dir: %w", err)
-	}
 	ts := time.Now().UTC().Format("20060102-150405")
-	target := filepath.Join(backupDir, fmt.Sprintf("econome-premigrate-%d-%d-%s.db", from, to, ts))
+	name := fmt.Sprintf("econome-premigrate-%d-%d-%s.db", from, to, ts)
+	_, err := vacuumInto(ctx, db, backupDir, name)
+	return err
+}
 
+// BackupTo writes a consistent VACUUM INTO snapshot of the database into
+// backupDir and returns the snapshot's path. It powers the econome-admin backup
+// command (technical/05 §8); the on-disk file is app-named, never user input.
+func BackupTo(ctx context.Context, db *sql.DB, backupDir string) (string, error) {
+	ts := time.Now().UTC().Format("20060102-150405")
+	return vacuumInto(ctx, db, backupDir, "econome-backup-"+ts+".db")
+}
+
+func vacuumInto(ctx context.Context, db *sql.DB, dir, name string) (string, error) {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return "", fmt.Errorf("repo: create backup dir: %w", err)
+	}
+	target := filepath.Join(dir, name)
 	// VACUUM INTO takes a string literal, not a bound parameter; target is
 	// app-controlled (never user input). Escape single quotes defensively.
 	literal := "'" + strings.ReplaceAll(target, "'", "''") + "'"
 	if _, err := db.ExecContext(ctx, "VACUUM INTO "+literal); err != nil { //nolint:gosec // target is app-controlled and quote-escaped; VACUUM INTO cannot be parameterised
-		return fmt.Errorf("repo: pre-migration backup failed: %w", err)
+		return "", fmt.Errorf("repo: backup failed: %w", err)
 	}
-	return nil
+	return target, nil
 }
 
 func maxVersion(applied map[int]bool) int {

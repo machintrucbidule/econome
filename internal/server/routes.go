@@ -34,7 +34,10 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	public := middleware.Chain(append(append([]middleware.Middleware{}, common...),
 		middleware.CSRF(secret, cfg.BehindTLS), middleware.Locale)...)
 	protected := middleware.Chain(append(append([]middleware.Middleware{}, common...),
-		middleware.AuthGuard, middleware.TenantContext(svc), middleware.CSRF(secret, cfg.BehindTLS), middleware.Locale)...)
+		middleware.AuthGuard, middleware.TenantContext(svc), middleware.ForcePasswordChange, middleware.CSRF(secret, cfg.BehindTLS), middleware.Locale)...)
+	// Admin-only chain adds the admin gate (non-admin ⇒ 404) after tenant context.
+	admin := middleware.Chain(append(append([]middleware.Middleware{}, common...),
+		middleware.AuthGuard, middleware.TenantContext(svc), middleware.ForcePasswordChange, middleware.AdminGuard, middleware.CSRF(secret, cfg.BehindTLS), middleware.Locale)...)
 
 	// Static assets bypass the auth chain (Recover + security headers only).
 	assetChain := middleware.Chain(middleware.Recover, middleware.SecurityHeaders(cfg.BehindTLS))
@@ -48,13 +51,47 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	mux.Handle("GET /login", public(http.HandlerFunc(h.LoginGet)))
 	mux.Handle("POST /login", public(http.HandlerFunc(h.LoginPost)))
 	mux.Handle("POST /login/totp", public(http.HandlerFunc(h.LoginTOTP)))
+	mux.Handle("GET /invite/{token}", public(http.HandlerFunc(h.InviteGet)))
+	mux.Handle("POST /invite/{token}", public(http.HandlerFunc(h.InvitePost)))
 
 	mux.Handle("POST /logout", protected(http.HandlerFunc(h.Logout)))
+
+	// Forced password change (must_change_password) — full page, exempt from the
+	// ForcePasswordChange redirect so the user can complete it.
+	mux.Handle("GET /password", protected(http.HandlerFunc(h.ForcedPasswordGet)))
+
+	// Self-service security (functional/01 §5–§7).
+	mux.Handle("GET /security/2fa", protected(http.HandlerFunc(h.TOTPEnrolGet)))
+	mux.Handle("POST /security/2fa", protected(http.HandlerFunc(h.TOTPConfirm)))
+	mux.Handle("GET /security/2fa/disable", protected(http.HandlerFunc(h.TOTPDisableGet)))
+	mux.Handle("POST /security/2fa/disable", protected(http.HandlerFunc(h.TOTPDisablePost)))
+	mux.Handle("POST /security/2fa/backup", protected(http.HandlerFunc(h.BackupRegenerate)))
+	mux.Handle("GET /security/password", protected(http.HandlerFunc(h.PasswordChangeGet)))
+	mux.Handle("POST /security/password", protected(http.HandlerFunc(h.PasswordChangePost)))
+	mux.Handle("GET /security/email", protected(http.HandlerFunc(h.EmailChangeGet)))
+	mux.Handle("POST /security/email", protected(http.HandlerFunc(h.EmailChangePost)))
+	mux.Handle("POST /security/sessions/{id}/revoke", protected(http.HandlerFunc(h.SessionRevoke)))
+	mux.Handle("POST /security/sessions/revoke-all", protected(http.HandlerFunc(h.SessionsRevokeAll)))
+
+	// Admin: invitations + user management (functional/01 §4/§8; admin-gated → 404).
+	mux.Handle("GET /admin/invitations/new", admin(http.HandlerFunc(h.InviteFormGet)))
+	mux.Handle("POST /admin/invitations", admin(http.HandlerFunc(h.InvitationCreate)))
+	mux.Handle("POST /admin/invitations/{id}/revoke", admin(http.HandlerFunc(h.InvitationRevoke)))
+	mux.Handle("GET /admin/users/{id}", admin(http.HandlerFunc(h.UserManageGet)))
+	mux.Handle("POST /admin/users/{id}/deactivate", admin(http.HandlerFunc(h.UserDeactivate)))
+	mux.Handle("POST /admin/users/{id}/reactivate", admin(http.HandlerFunc(h.UserReactivate)))
+	mux.Handle("POST /admin/users/{id}/reset-2fa", admin(http.HandlerFunc(h.UserResetTOTP)))
+	mux.Handle("POST /admin/users/{id}/reset-password", admin(http.HandlerFunc(h.UserResetPassword)))
 
 	// Budget — Prévisionnel (forecast) is the landing screen (functional/02 §6).
 	mux.Handle("GET /{$}", protected(http.HandlerFunc(h.ForecastGet)))
 	mux.Handle("PATCH /allocations/{env}", protected(http.HandlerFunc(h.AllocationPatch)))
 	mux.Handle("POST /transfers/end-of-month", protected(http.HandlerFunc(h.EndOfMonthTransfer)))
+
+	// Month lifecycle controls (increment 8): close/unlock + regenerate (L1/L9).
+	mux.Handle("POST /periods/{period}/lock", protected(http.HandlerFunc(h.PeriodLock)))
+	mux.Handle("POST /periods/{period}/unlock", protected(http.HandlerFunc(h.PeriodUnlock)))
+	mux.Handle("POST /periods/{period}/regenerate", protected(http.HandlerFunc(h.PeriodRegenerate)))
 
 	// Budget — Journal (increment 6c).
 	mux.Handle("GET /journal", protected(http.HandlerFunc(h.JournalGet)))

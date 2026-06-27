@@ -281,6 +281,16 @@ func (f fakeInvitations) ByTokenHash(_ context.Context, _ repo.DBTX, tokenHash s
 	return nil, domain.ErrNotFound
 }
 
+func (f fakeInvitations) ByID(_ context.Context, _ repo.DBTX, id int64) (*domain.Invitation, error) {
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	if inv, ok := f.d.invitations[id]; ok {
+		ii := inv
+		return &ii, nil
+	}
+	return nil, domain.ErrNotFound
+}
+
 func (f fakeInvitations) Update(_ context.Context, _ repo.DBTX, inv *domain.Invitation) error {
 	f.d.mu.Lock()
 	defer f.d.mu.Unlock()
