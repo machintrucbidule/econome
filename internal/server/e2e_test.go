@@ -42,19 +42,21 @@ func newTestServer(t *testing.T) (*httptest.Server, *http.Client) {
 		t.Fatal(err)
 	}
 	svc := services.New(services.Deps{
-		Users:        store.Users,
-		Sessions:     store.Sessions,
-		Settings:     store.Settings,
-		Accounts:     store.Accounts,
-		Categories:   store.Categories,
-		Envelopes:    store.Envelopes,
-		Allocations:  store.Allocations,
-		Transactions: store.Transactions,
-		Snapshots:    store.Snapshots,
-		Periods:      store.Periods,
-		PeriodEvents: store.PeriodEvents,
-		Tx:           store,
-		Secret:       []byte("secret-0123456789abcdef0123456789"),
+		Users:         store.Users,
+		Sessions:      store.Sessions,
+		Settings:      store.Settings,
+		Accounts:      store.Accounts,
+		Categories:    store.Categories,
+		Envelopes:     store.Envelopes,
+		Allocations:   store.Allocations,
+		Transactions:  store.Transactions,
+		Snapshots:     store.Snapshots,
+		Periods:       store.Periods,
+		PeriodEvents:  store.PeriodEvents,
+		Labels:        store.Labels,
+		UIPreferences: store.UIPreferences,
+		Tx:            store,
+		Secret:        []byte("secret-0123456789abcdef0123456789"),
 	})
 	cfg := &config.Config{Listen: ":0", BehindTLS: false, DefaultLocale: "fr"}
 	ts := httptest.NewServer(server.New(cfg, svc, rdr).Handler)

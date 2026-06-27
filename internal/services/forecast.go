@@ -41,6 +41,8 @@ type ForecastTxn struct {
 type ForecastRow struct {
 	Key         string // stable expand key ("e<id>" leaf · "c<id>" parent)
 	EnvelopeID  int64
+	CategoryID  int64 // a parent row's category (the M4 expand node)
+	Open        bool  // persisted/seeded expand state (M4)
 	Name        string
 	AccountName string // shown as a pill in the aggregated scope
 	ShowPill    bool
@@ -189,7 +191,11 @@ func (s *Service) Forecast(ctx context.Context, userID int64, period, scope stri
 	inScope := s.scopeAccounts(d.Accounts, scope)
 	d.ScopeKind = s.scopeKind(d.Accounts, scope)
 
-	d.Rows = s.forecastRows(in, inScope, d.ScopeKind == scopeKindAggregated)
+	prefs, err := s.ExpandPrefs(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	d.Rows = s.forecastRows(in, inScope, d.ScopeKind == scopeKindAggregated, prefs)
 	d.Total = expenseTotal(d.Rows)
 	d.HasHiddenTransfers = d.ScopeKind == scopeKindAggregated && hasInternalTransfers(in, inScope)
 	d.Empty = len(d.Rows) == 0
@@ -327,7 +333,7 @@ func (s *Service) scopeKind(accounts []domain.Account, scope string) string {
 // the category hierarchy (parents roll up their children, M2); aggregated is a
 // flat list with account pills (functional/05 §4c). Transfer and residual
 // envelopes are excluded from rows (rules §10).
-func (s *Service) forecastRows(in engine.Inputs, scopeAccts []domain.Account, aggregated bool) []ForecastRow {
+func (s *Service) forecastRows(in engine.Inputs, scopeAccts []domain.Account, aggregated bool, prefs map[NodeKey]bool) []ForecastRow {
 	inScope := map[int64]bool{}
 	for _, a := range scopeAccts {
 		inScope[a.ID] = true
@@ -378,6 +384,7 @@ func (s *Service) forecastRows(in engine.Inputs, scopeAccts []domain.Account, ag
 			HasBar:      l.env.Mode == domain.ModeVariable && l.v.Planned > 0 && l.v.Flow == domain.FlowExpense,
 		}
 		row.Drill = drillTxns(in, l.env)
+		row.Open = prefs[NodeKey{Type: domain.NodeEnvelope, ID: l.env.ID}] // a leaf's drill (M4)
 		return row
 	}
 
@@ -418,7 +425,7 @@ func (s *Service) forecastRows(in engine.Inputs, scopeAccts []domain.Account, ag
 			children = append(children, mkLeaf(l))
 		}
 		sortRows(children)
-		rows = append(rows, rollupParent(pc, children))
+		rows = append(rows, rollupParent(pc, children, prefs))
 	}
 	sortRows(rows)
 	return rows
@@ -427,13 +434,19 @@ func (s *Service) forecastRows(in engine.Inputs, scopeAccts []domain.Account, ag
 // rollupParent builds a parent category row from its children: exact integer
 // sums and the most-severe child state (overrun > partial > expected > paid >
 // none), badge marked "agrégé" (functional/05 §2 / M2).
-func rollupParent(pc domain.Category, children []ForecastRow) ForecastRow {
+func rollupParent(pc domain.Category, children []ForecastRow, prefs map[NodeKey]bool) ForecastRow {
+	open := pc.DefaultExpanded // seed from the config (M4); a user override wins
+	if v, ok := prefs[NodeKey{Type: domain.NodeCategory, ID: pc.ID}]; ok {
+		open = v
+	}
 	p := ForecastRow{
-		Key:      "c" + idStr(pc.ID),
-		Name:     pc.Name,
-		Flow:     domain.FlowExpense,
-		IsParent: true,
-		Children: children,
+		Key:        "c" + idStr(pc.ID),
+		CategoryID: pc.ID,
+		Open:       open,
+		Name:       pc.Name,
+		Flow:       domain.FlowExpense,
+		IsParent:   true,
+		Children:   children,
 	}
 	for _, c := range children {
 		p.Planned += c.Planned

@@ -207,7 +207,7 @@ func (s *Service) CreateTransaction(ctx context.Context, userID int64, in TxnInp
 		}
 		t.ID = id
 		created = t
-		return nil
+		return s.recordLabel(ctx, q, userID, t.Label, t.CategoryID, t.AccountID) // learn the label (M21)
 	})
 	if err != nil {
 		return nil, err
@@ -241,7 +241,13 @@ func (s *Service) UpdateTransaction(ctx context.Context, userID, id int64, field
 			}
 		}
 		t.UpdatedAt = now
-		return s.transactions.Update(ctx, q, t)
+		if err := s.transactions.Update(ctx, q, t); err != nil {
+			return err
+		}
+		if field == "label" {
+			return s.recordLabel(ctx, q, userID, t.Label, t.CategoryID, t.AccountID) // learn the edited label (M21)
+		}
+		return nil
 	})
 }
 

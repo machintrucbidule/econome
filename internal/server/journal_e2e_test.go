@@ -105,8 +105,10 @@ func TestJournalCreateEditDelete(t *testing.T) {
 		t.Fatalf("delete = %d", resp.StatusCode)
 	}
 	_ = bodyOf(t, resp)
-	page = getBody(t, client, base, "/journal?period=2026-06&scope=all")
-	if strings.Contains(page, "Café du coin") {
-		t.Error("deleted transaction still present")
+	// Assert on the table body (the learned-label mapping legitimately persists
+	// the label in the page's #j-labels block after the txn is deleted, M21).
+	rowsResp, _ = client.Get(base + "/journal/rows?period=2026-06&scope=all")
+	if rows := bodyOf(t, rowsResp); strings.Contains(rows, "Café du coin") {
+		t.Error("deleted transaction still present in the table")
 	}
 }

@@ -64,6 +64,11 @@ type FRow struct {
 	Scope    string
 	Hidden   bool // a child row is collapsed by default
 	OOB      bool // render with hx-swap-oob (out-of-band fragment)
+
+	// expand persistence (6d / M4)
+	Open     bool   // resolved open state (children/drill visible, chevron open)
+	NodeType string // "category" (parent) | "envelope" (leaf) — for PUT /ui/expand
+	NodeID   int64
 }
 
 // FTotal is the footer total (expense only).

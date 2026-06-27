@@ -93,6 +93,8 @@
   function jCats() { return jData("j-cats"); }
   function jAccts() { return jData("j-accts"); }
   function jStatuses() { return jData("j-status"); }
+  function jLabels() { return jData("j-labels"); }
+  function wireLabelAutocomplete(input) { if (input && window.emAutocomplete) window.emAutocomplete(input, jLabels()); }
   function setHidden(id, v) { var h = document.getElementById(id); if (h) h.value = v == null ? "" : v; }
   function fireChange(el) { if (el) el.dispatchEvent(new Event("change", { bubbles: true })); }
   function acctLabel(id) { var a = jAccts().filter(function (x) { return x.value === String(id); })[0]; return a ? a.label : String(id); }
@@ -162,6 +164,7 @@
     var raw = field === "amount" ? span.textContent.replace(/[^\d.,]/g, "") : span.textContent;
     var inp = document.createElement("input"); inp.className = field === "amount" ? "amt-inp" : "lbl-inp"; inp.value = raw;
     cell.replaceChild(inp, span); inp.focus(); inp.select();
+    if (field === "label") wireLabelAutocomplete(inp); // M21 autocomplete on the inline label editor
     var closed = false;
     var done = function (commit) {
       if (closed) return; closed = true;
@@ -193,6 +196,23 @@
     if (lf) lf.focus();
   }
 
+  /* forecast row expand (6d, M4) — app.js is the sole toggler (the rows use
+     frow/fchev so econome.js does not also wire them, O-23), and persists the
+     state via PUT /ui/expand. Works for initial and htmx-swapped rows. */
+  function toggleForecastRow(row) {
+    var key = row.getAttribute("data-k");
+    var open = row.classList.toggle("open");
+    var chev = row.querySelector(".fchev");
+    if (chev) chev.classList.toggle("open", open);
+    $$('tr[data-c="' + key + '"], tr[data-d="' + key + '"]').forEach(function (tr) {
+      tr.classList.toggle("hidden", !open);
+    });
+    var nt = row.getAttribute("data-node-type"), nid = row.getAttribute("data-node-id");
+    if (nt && nid && window.htmx) {
+      window.htmx.ajax("PUT", "/ui/expand", { source: row, values: { node_type: nt, node_id: nid, expanded: open ? "1" : "0" }, swap: "none" });
+    }
+  }
+
   /* delegated click handling (CSP-clean) */
   document.addEventListener("click", function (e) {
     if (e.target.closest(".em-menu,.em-cal,.em-mp,.em-auto,input")) return; // let widgets/inline inputs handle their own clicks
@@ -215,14 +235,7 @@
     } else if (action === "goto") {
       var href = el.getAttribute("data-href"); if (href) window.location.assign(href);
     } else if (action === "toggle-row") {
-      /* forecast row expand: parent → its children, leaf → its drill-down */
-      var key = el.getAttribute("data-k");
-      var open = el.classList.toggle("open");
-      var chev = el.querySelector(".chev");
-      if (chev) chev.classList.toggle("open", open);
-      $$('tr[data-c="' + key + '"], tr[data-d="' + key + '"]').forEach(function (tr) {
-        tr.classList.toggle("hidden", !open);
-      });
+      toggleForecastRow(el);
     } else if (action === "modal-close") {
       var host = $("#modal-host"); if (host) host.innerHTML = "";
     } else if (action === "cascade-remove") {
@@ -258,10 +271,13 @@
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Enter" && e.key !== " ") return;
     if (e.target.closest("input,.em-menu,.em-cal,.em-mp")) return;
-    var el = e.target.closest('[data-action="j-edit"],[data-action="j-sort"]');
+    var el = e.target.closest('[data-action="j-edit"],[data-action="j-sort"],[data-action="toggle-row"]');
     if (!el) return;
     e.preventDefault();
-    if (el.getAttribute("data-action") === "j-sort") jSort(el); else jEdit(el);
+    var act = el.getAttribute("data-action");
+    if (act === "j-sort") jSort(el);
+    else if (act === "toggle-row") toggleForecastRow(el);
+    else jEdit(el);
   });
 
   function init() {
@@ -280,6 +296,7 @@
     initCascade();
     adaptAccount();
     adaptEnvelope();
+    wireLabelAutocomplete($("#q-label")); // quick-entry label autocomplete (M21)
   }
   if (document.readyState !== "loading") init();
   else document.addEventListener("DOMContentLoaded", init);

@@ -80,19 +80,21 @@ func run() error {
 		return err
 	}
 	svc := services.New(services.Deps{
-		Users:        store.Users,
-		Sessions:     store.Sessions,
-		Settings:     store.Settings,
-		Accounts:     store.Accounts,
-		Categories:   store.Categories,
-		Envelopes:    store.Envelopes,
-		Allocations:  store.Allocations,
-		Transactions: store.Transactions,
-		Snapshots:    store.Snapshots,
-		Periods:      store.Periods,
-		PeriodEvents: store.PeriodEvents,
-		Tx:           store,
-		Secret:       secret,
+		Users:         store.Users,
+		Sessions:      store.Sessions,
+		Settings:      store.Settings,
+		Accounts:      store.Accounts,
+		Categories:    store.Categories,
+		Envelopes:     store.Envelopes,
+		Allocations:   store.Allocations,
+		Transactions:  store.Transactions,
+		Snapshots:     store.Snapshots,
+		Periods:       store.Periods,
+		PeriodEvents:  store.PeriodEvents,
+		Labels:        store.Labels,
+		UIPreferences: store.UIPreferences,
+		Tx:            store,
+		Secret:        secret,
 	})
 
 	srv := server.New(cfg, svc, rdr)

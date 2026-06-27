@@ -105,74 +105,43 @@ orchestration) → `engine` (PURE) ← `domain`; `repo` (only SQLite importer, e
 
 ## Current state
 
-**Increment 5 (month-initialisation assistant) — DONE & MERGED** (PR #22). The first
-feature to **consume the pure engine through a screen**: `/month-init?period=&scope=` computes the editable,
-**non-persisted** draft (start cards, posts table, residual encart) recomputed **server-side by the engine**
-on each leaf edit (no client computation, I-025); "Créer le mois" (`POST /month-init`) materialises
-**allocations + awaited transactions + the `period` row** (`state=active`) + a `create` `period_event` in
-**one transaction** (refuses an already-created period, I-027) then redirects. Materialisation: fixed
-expense/income → allocation + awaited txn; variable → allocation only; fixed transfer → awaited transfer only
-(dest set, no allocation); residual → nothing. `engineInputs`/`startBalances` (I-018/I-026) is the reusable
-engine-assembly seam (inc 6/7 reuse it). **T11**: `envelope.dest_account_id` added (migration `0007`,
-additive) so a transfer envelope stores its destination — the Enveloppes config gained a dest picker (current
-account ≠ source, service-validated). M26 rail scope filters the draft. `Service` now wires `PeriodEvents`.
-Decisions **T11**, **I-025..I-028**. See `docs/progress/0005-month-init.md`.
+**Milestones M0–M2 DONE.** Increments 0–4: scaffold; walking skeleton (owner setup → login → shell → logout,
+sessions/lockout/CSRF, migrations-with-backup, htmx); the **sealed pure engine + reconciliation** (91.7 %);
+the full budget schema + `user_id`-scoped repos + fakes; both configuration screens (Paramètres + Enveloppes,
+I-021..I-024). **Increment 5** (month-init assistant, PR #22): the non-persisted engine-computed draft →
+"Créer le mois" materialises allocations + awaited txns + the `period` row in one tx; `engineInputs`/
+`startBalances` (I-018/I-026) is the reusable engine seam (inc 6/7 reuse it); **T11** `envelope.dest_account_id`
+(migration `0007`). D2 post-merge fixes #23–#26 (I-029/I-030, M27).
 
-**D2 checkpoint held** (running build, default port now **`:8765`**). Post-merge fixes shipped while the user
-tested, each its own merged PR: **#23** default listen port `:8080`→`:8765` (**I-029**); **#24** restored the
-`/setup`+`/login` card styling (the auth-layout CSS was never ported from the `login.html` mockup into
-`web/assets/econome.css` — regression test added); **#25** password **min length 12→8** (**M27**, supersedes
-A8's length) + wired the home shell's dead "Configuration" nav link to `/config/parameters`; **#26** the money
-parser accepts a `.` as decimal in fr-FR when unambiguous, fixing a ×100 (**I-030**). Added
-`scripts/clean.bat` (fresh DB, with confirmation).
+**Milestone M2 (Budget core) — COMPLETE; demo D3 held.** Increment 6 delivered as **4 PRs**:
+- **6a** (#28) Forecast read-only — the **budget landing** at `GET /{$}` (retired `home.html`, **O-20**): the
+  hierarchy with 5-state leaf + rolled-up parent badges (M2), the right panel, the server-rendered
+  treasury-timeline SVG (M17), 3 scope variants, drill-down, states. Fixed a latent inc-5 transfer sign bug
+  (**I-031**: internal transfers stored source-signed negative).
+- **6b** (#29) Forecast inline `Prévu` edit (`PATCH /allocations/{env}`, **I-032**) with live OOB recompute
+  (id-stable fragments `fc-row`/`fc-total`/`fc-figures`/`fc-panel`/`fc-timeline`; §4a residual-negative → red
+  Point bas); "Virer en fin de mois" sweep (`POST /transfers/end-of-month`, `to_save` → cascade target).
+- **6c** (#30) Journal — quick-entry (`POST /transactions`, `econome.js` custom selects, CSP-clean inert-JSON
+  option blocks); whole-cell inline edit (`PATCH /transactions/{id}`, date↔status §4, M23 transfer scope);
+  server-side sort/filter (`GET /journal/rows`, `f`-prefixed + `filtered=1`); month summary; atomic delete L8.
+  Decisions **I-033**.
+- **6d** reconciliation seam (`services/reconcile.go`: `ReconcileCleared`/`PairInternalTransfer` wrap the pure
+  `engine.Reconcile`/`PairTransfer` — built + tested + **mandatory review**, **not** wired into manual
+  auto-matching per the user/spec; DSP2 wires it later) + **label autocomplete** (M21, learned `label_mapping`
+  + embedded top-N + `emAutocomplete`; `/api/labels` deferred) + **expand persistence** (M4, `PUT /ui/expand`;
+  **O-23 resolved** — forecast toggle now `frow`/`fchev`, `app.js` sole toggler). Decisions **I-034**.
+  See `docs/progress/0006-budget-core.md`.
 
-**Increment 6 = Forecast + Journal + reconciliation orchestration** (Milestone M2) is being delivered as
-**4 small sequential PRs**; demo **D3** follows 6d.
-
-**6a (Forecast read-only) — DONE** (all gates green; awaiting the user's go-ahead before 6b). The forecast is
-now the **budget landing** at `GET /{$}` (replacing the retired `home.html` placeholder — **O-20 resolved**):
-the envelope hierarchy with **5-state leaf badges + rolled-up parent badges** (M2), the right insights panel
-(figures + savings encart + à surveiller), the **server-rendered treasury-timeline SVG** (M17), the 3 scope
-variants (sweep/carry/aggregated), the read-only transaction drill-down (D2), and the not-created/empty/locked
-states. New: `services/forecast.go` (read-model via the `engineInputs` seam), `view/forecast.go` (+ the SVG
-renderer), `handlers/forecast.go`, `web/templates/forecast.html` (the real CSP-clean budget shell). Fixed a
-latent increment-5 sign bug (**I-031**): internal-transfer txns are now stored source-signed (negative) so the
-engine's balances/timeline/carry-funding figure are correct. Independent spec review of the read-model + sign
-fix: **no correctness bugs**. See `docs/progress/0006-budget-core.md`.
-
-**6b (Forecast inline edit) — DONE** (all gates green; awaiting go-ahead before 6c). The forecast is now
-interactive: the inline `Prévu` edit (`PATCH /allocations/{env}`, envelope-keyed upsert **I-032**) with live
-server-side recompute (the screen is decomposed into id-stable OOB fragments — `fc-row`/`fc-total`/
-`fc-figures`/`fc-panel`/`fc-timeline`; a PATCH returns the edited row + OOB parent/total/panel/figures per the
-recalc matrix, figures included for the §4a residual-negative → red Point bas coupling, timeline correctly
-omitted); the "Virer en fin de mois" sweep (`POST /transfers/end-of-month` → a cleared sweep→cascade-target
-transfer of `to_save`, source-signed negative I-031, disabled when to_save≤0/cascade-full/locked); and the
-locked-month guard on every mutation via `ensureEditable` (→409). See `docs/progress/0006-budget-core.md` (6b).
-
-**6c (Journal) — DONE** (one PR; all gates green; awaiting go-ahead before 6d). The flat entry journal
-(`functional/06`): quick-entry create (`POST /transactions`, custom selects reusing the `econome.js` widgets,
-CSP-clean via inert JSON option blocks + `selSet` ported to `app.js`); whole-cell inline edit
-(`PATCH /transactions/{id}`, one field, date↔status §4 consistency, M23 transfer scope); **server-side**
-sort (date desc default, undated last) + filters (`f`-prefixed params + `filtered=1` sentinel) via
-`GET /journal/rows`; the right-panel month summary (transfers excluded); atomic delete L8; states + the
-locked guard on every mutation. CSS port of the journal classes into `econome.css` (+ regression test).
-New: `services/journal.go`, `view/journal.go`, `handlers/journal.go`, `web/templates/journal.html`. Decisions
-**I-033**. See `docs/progress/0006-budget-core.md` (6c).
-
-**Next: 6d** reconciliation orchestration via the pure `engine.Reconcile`/`PairTransfer` (match a new cleared
-movement to its awaited twin: edit-in-place, no duplicate L6, variance→residual; internal-transfer
-auto-pairing) + `label_mapping` autocomplete (`GET /api/labels`, M21) + `ui_preference` expand
-(`PUT /ui/expand`, M4) — **mandatory subagent review on the reconciliation path**, then close-out + demo
-**D3**. Open points **O-16** (no opening-balance column), **O-17** (snapshots-at-init for cascade-full),
-**O-18** (sweep start≈0 depends on the close increment's sweep txn — the 6b "Virer" is the manual sweep; inc
-8's close reuses it), **O-19** `e2e chrome smoke` flaky (hardened in 6b with `WSURLReadTimeout`), **O-21**
-(savings accounts not yet in the forecast rail — deferred to inc 7), **O-22** (inline `Prévu` edit is
-per-account scope only), **O-23** (forecast chevron double-wired with `econome.js` — row-body clicks work;
-forecast follow-up).
-(Increments 0–4 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
-lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; the sealed pure engine + reconciliation
-at 91.7 %; the full budget schema + `user_id`-scoped repos + fakes; and both configuration screens
-(Paramètres + Enveloppes, combined category+envelope CRUD I-021, SortableJS cascade, I-021..I-024).)
+**Next: increment 7 — Net worth (Synthèse + Registre)** (Milestone M3; `functional/07`, `04` §3.6 L7, `rules`
+§12–§13, `technical/04` §3.4, `technical/03` §4.3/§4.4): metric cards, the editable snapshot table (PEA net /
+subtotal / total / Δ derived live), the evolution curve + history, snapshots **always editable independent of
+the budget lock** (L7), the per-month comment. Routes `GET /networth`, `PATCH/POST/DELETE /snapshots`,
+`PUT /networth/:period/comment`, `GET /register`, `GET /register/chart`. **Independent of inc 4–6** (depends on
+inc 1 shell, inc 2 net-worth engine, inc 3 snapshot/`networth_month` repos). Demo **D4** follows; resolves
+**O-21** (savings gain the Patrimoine destination). **Awaiting the user's go-ahead** (`G15`). Carried open
+points: **O-16** (no opening-balance column), **O-17** (snapshots-at-init for cascade-full), **O-18** (the
+close increment's sweep txn), **O-19** (`e2e chrome smoke` flake, mitigated by `WSURLReadTimeout`), **O-22**
+(inline `Prévu` edit per-account scope only).
 
 > Reminders: `main` is protected — all changes via PR → CI green → merge; required checks now include
 > `e2e chrome smoke` (O-7 resolved). Dependabot minor/patch auto-merge on green, majors manual (I-008).

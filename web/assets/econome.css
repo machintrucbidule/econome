@@ -340,3 +340,13 @@ td.e:hover .catpill,td.e:focus-visible .catpill,td.e:hover .chip-period,td.e:foc
 .panel-card{border:1px solid var(--line);border-radius:13px;padding:15px 16px;margin-bottom:14px;background:var(--surface)}
 .panel-card>.l{color:var(--muted);font-weight:800;font-size:12px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:11px}
 .flab{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:7px}
+
+/* Forecast row toggle (increment 6d, O-23) — frow/fchev so the validated
+   econome.js (which wires .tog/.chev at load) does not double-handle; app.js is
+   the sole toggler and persists via PUT /ui/expand. Mirrors .tog/.chev. */
+tbody tr.frow{cursor:pointer}
+tbody tr.frow:hover{background:var(--brand-soft)}
+.fchev{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:0;background:none;color:var(--faint);cursor:pointer;font-size:12px;border-radius:4px;transition:transform .15s}
+.fchev:hover{color:var(--ink);background:var(--sunk)}
+.fchev.open{transform:rotate(90deg)}
+.fchev:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
