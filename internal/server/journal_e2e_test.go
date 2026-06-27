@@ -11,8 +11,10 @@ import (
 // Journal e2e backbone (increment 6c). Drives the real HTTP surface: states,
 // quick-entry create, server-side sort/filter, inline edit, delete.
 
-var reCatID = regexp.MustCompile(`"value":"(\d+)"`)
-var reRowID = regexp.MustCompile(`id="jrow-(\d+)"`)
+var (
+	reCatID = regexp.MustCompile(`"value":"(\d+)"`)
+	reRowID = regexp.MustCompile(`id="jrow-(\d+)"`)
+)
 
 func firstMatch(t *testing.T, re *regexp.Regexp, s, what string) string {
 	t.Helper()
