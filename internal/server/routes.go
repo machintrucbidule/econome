@@ -56,6 +56,13 @@ func New(cfg *config.Config, svc *services.Service, rdr *view.Renderer) *http.Se
 	mux.Handle("PATCH /allocations/{env}", protected(http.HandlerFunc(h.AllocationPatch)))
 	mux.Handle("POST /transfers/end-of-month", protected(http.HandlerFunc(h.EndOfMonthTransfer)))
 
+	// Budget — Journal (increment 6c).
+	mux.Handle("GET /journal", protected(http.HandlerFunc(h.JournalGet)))
+	mux.Handle("GET /journal/rows", protected(http.HandlerFunc(h.JournalRows)))
+	mux.Handle("POST /transactions", protected(http.HandlerFunc(h.TransactionCreate)))
+	mux.Handle("PATCH /transactions/{id}", protected(http.HandlerFunc(h.TransactionPatch)))
+	mux.Handle("DELETE /transactions/{id}", protected(http.HandlerFunc(h.TransactionDelete)))
+
 	// Configuration — Paramètres (increment 4, PR-a).
 	mux.Handle("GET /config/parameters", protected(http.HandlerFunc(h.ParametersGet)))
 	mux.Handle("GET /config/accounts/new", protected(http.HandlerFunc(h.AccountFormGet)))

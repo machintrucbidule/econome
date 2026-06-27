@@ -149,15 +149,26 @@ omitted); the "Virer en fin de mois" sweep (`POST /transfers/end-of-month` → a
 transfer of `to_save`, source-signed negative I-031, disabled when to_save≤0/cascade-full/locked); and the
 locked-month guard on every mutation via `ensureEditable` (→409). See `docs/progress/0006-budget-core.md` (6b).
 
-**Next: 6c** Journal (quick-entry, whole-cell inline edit, sort/filter, transfer rows, atomic delete L8;
-`functional/06`, `04` §3.5, `technical/04` §3.3). Then **6d** reconciliation orchestration via the pure
-`engine.Reconcile`/`PairTransfer` (edit-in-place, no duplicate L6, variance→residual) + `label_mapping`
-autocomplete + `ui_preference` expand — **mandatory subagent review on the reconciliation path**, then
-close-out + D3. Open points **O-16** (no opening-balance column), **O-17** (snapshots-at-init for
-cascade-full), **O-18** (sweep start≈0 depends on the close increment's sweep txn — the 6b "Virer" is the
-manual sweep; inc 8's close reuses it), **O-19** `e2e chrome smoke` flaky, **O-21** (savings accounts not yet
-in the forecast rail — deferred to inc 7), **O-22** (inline `Prévu` edit is per-account scope only; aggregated
-rows read-only).
+**6c (Journal) — DONE** (one PR; all gates green; awaiting go-ahead before 6d). The flat entry journal
+(`functional/06`): quick-entry create (`POST /transactions`, custom selects reusing the `econome.js` widgets,
+CSP-clean via inert JSON option blocks + `selSet` ported to `app.js`); whole-cell inline edit
+(`PATCH /transactions/{id}`, one field, date↔status §4 consistency, M23 transfer scope); **server-side**
+sort (date desc default, undated last) + filters (`f`-prefixed params + `filtered=1` sentinel) via
+`GET /journal/rows`; the right-panel month summary (transfers excluded); atomic delete L8; states + the
+locked guard on every mutation. CSS port of the journal classes into `econome.css` (+ regression test).
+New: `services/journal.go`, `view/journal.go`, `handlers/journal.go`, `web/templates/journal.html`. Decisions
+**I-033**. See `docs/progress/0006-budget-core.md` (6c).
+
+**Next: 6d** reconciliation orchestration via the pure `engine.Reconcile`/`PairTransfer` (match a new cleared
+movement to its awaited twin: edit-in-place, no duplicate L6, variance→residual; internal-transfer
+auto-pairing) + `label_mapping` autocomplete (`GET /api/labels`, M21) + `ui_preference` expand
+(`PUT /ui/expand`, M4) — **mandatory subagent review on the reconciliation path**, then close-out + demo
+**D3**. Open points **O-16** (no opening-balance column), **O-17** (snapshots-at-init for cascade-full),
+**O-18** (sweep start≈0 depends on the close increment's sweep txn — the 6b "Virer" is the manual sweep; inc
+8's close reuses it), **O-19** `e2e chrome smoke` flaky (hardened in 6b with `WSURLReadTimeout`), **O-21**
+(savings accounts not yet in the forecast rail — deferred to inc 7), **O-22** (inline `Prévu` edit is
+per-account scope only), **O-23** (forecast chevron double-wired with `econome.js` — row-body clicks work;
+forecast follow-up).
 (Increments 0–4 done: scaffold; the walking skeleton — owner setup → login → shell → logout, sessions/
 lockout/CSRF, migrations-with-backup, htmx, `money.go` → `−635,00 €`; the sealed pure engine + reconciliation
 at 91.7 %; the full budget schema + `user_id`-scoped repos + fakes; and both configuration screens
