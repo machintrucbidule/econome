@@ -44,7 +44,7 @@ type NWLine struct {
 	SnapshotID  int64
 	HasSnapshot bool
 	DelTitle    string
-	DotColor    string
+	DotClass    string // CSS palette class for the support dot ("" | "sav" | "pea" | "emp")
 	Ann         string // "− 17,2 % sur gains" on the PEA net row
 	Indent      bool
 	RowClass    string // "" | "sub-row" | "tot-row"
